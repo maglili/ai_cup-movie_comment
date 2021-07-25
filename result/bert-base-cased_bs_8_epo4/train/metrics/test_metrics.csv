@@ -1,0 +1,12 @@
+"
+[test average]
+"
+ACC: 0.91
+LOSS: 0.43
+Recall: 0.93
+Specificity: 0.9
+Precision: 0.9
+NPV: 0.92
+F1: 0.92
+MCC: 0.83
+AUC: 0.97
