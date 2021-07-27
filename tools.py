@@ -26,64 +26,6 @@ def get_device():
     return device
 
 
-def tokenizing_for_bert(train_list_x, train_list_y, tokenizer, train=True):
-    """
-    Tokenize abstracts and return data as Bert model input tensor.
-    """
-
-    print("tokenizing for bert input")
-
-    # save k-fold data by dict
-    # key: train + idx, value: tensor
-    input_ids_dict = {}
-    attention_masks_dict = {}
-    labels_dict = {}
-
-    # main process
-    # For every fold...
-    for idx in range(len(train_list_x)):
-
-        sent_list = train_list_x[idx]
-        sent_label = train_list_y[idx]
-
-        # Tokenize all of the sentences and map the tokens to thier word IDs.
-        input_ids_list = []
-        attention_masks_list = []
-        # For every sentence...
-        for sent in sent_list:
-            encoded_dict = tokenizer.encode_plus(
-                sent,  # Sentence to encode.
-                add_special_tokens=True,  # Add '[CLS]' and '[SEP]'
-                max_length=400,  # 512,  # Pad & truncate all sentences.
-                padding="max_length",
-                return_attention_mask=True,  # Construct attn. masks.
-                return_tensors="pt",  # Return pytorch tensors.
-                truncation=True,
-            )
-
-            # Add the encoded sentence to the list.
-            input_ids_list.append(encoded_dict["input_ids"])
-
-            # And its attention mask (simply differentiates padding from non-padding).
-            attention_masks_list.append(encoded_dict["attention_mask"])
-
-        # Convert the lists into tensors.
-        input_ids = torch.cat(input_ids_list, dim=0)
-        attention_masks = torch.cat(attention_masks_list, dim=0)
-        labels = torch.tensor(sent_label)
-
-        if train:
-            input_ids_dict["tr_" + str(idx)] = input_ids
-            attention_masks_dict["tr_" + str(idx)] = attention_masks
-            labels_dict["tr_" + str(idx)] = labels
-        else:
-            input_ids_dict["va_" + str(idx)] = input_ids
-            attention_masks_dict["va_" + str(idx)] = attention_masks
-            labels_dict["va_" + str(idx)] = labels
-
-    return input_ids_dict, attention_masks_dict, labels_dict
-
-
 def batch_iter(model, dataloader, optimizer, scheduler, device, training=True):
 
     correct = 0
@@ -171,7 +113,7 @@ def calc_metrics(
     y_list,
     yhat_list,
     useful_stuff,
-    type="training",
+    mtype,
 ):
     (TP, FP, TN, FN) = confusion_matrix
     fpr, tpr, _ = metrics.roc_curve(y_list, yhat_list)
@@ -179,7 +121,7 @@ def calc_metrics(
     acc = correct / N_data
     loss = training_loss / len(dataloader)
     useful_stuff = save_result(
-        useful_stuff, acc, loss, (TP, FP, TN, FN), auc, fpr, tpr, type
+        useful_stuff, acc, loss, (TP, FP, TN, FN), auc, fpr, tpr, mtype
     )
 
     return useful_stuff
@@ -247,7 +189,7 @@ def train_model(
     model_path = os.path.join(path, "model.pkl")
     early_stopping = EarlyStopping(patience=patience, path=model_path, verbose=True)
 
-    for _ in range(epochs):
+    for epoch in range(epochs):
         # training
         (
             model,
@@ -267,7 +209,7 @@ def train_model(
             y_list,
             yhat_list,
             useful_stuff,
-            type="training",
+            mtype="training",
         )
 
         # evaluate training
@@ -291,7 +233,7 @@ def train_model(
             y_list,
             yhat_list,
             useful_stuff,
-            type="train",
+            mtype="train",
         )
 
         # Validation
@@ -315,12 +257,12 @@ def train_model(
             y_list,
             yhat_list,
             useful_stuff,
-            type="valid",
+            mtype="valid",
         )
 
         # early_stopping needs the validation loss to check if it has decresed,
         # and if it has, it will make a checkpoint of the current model
-        early_stopping(training_loss, model)
+        early_stopping(training_loss / len(valid_loader), model, epoch)
 
         if early_stopping.early_stop:
             print("Early stopping")
@@ -328,10 +270,10 @@ def train_model(
 
         print("=" * 25)
 
-    return useful_stuff
+    return useful_stuff, early_stopping.best_epoch
 
 
-def final_metric(history, path, mtype="train"):
+def final_metric_cv(history, path, mtype="train", best_epoch=False):
     """
     Calculate metric.
     """
@@ -348,13 +290,18 @@ def final_metric(history, path, mtype="train"):
     FPR = []
     TPR = []
 
+    if best_epoch:
+        idx = best_epoch
+    else:
+        idx = -1
+
     for i in range(len(history)):
 
-        (TP, FP, TN, FN) = history[i][mtype + "_metric"][-1]
-        auc = history[i][mtype + "_auc"][-1]
-        fpr = history[i][mtype + "_fpr"][-1]
-        tpr = history[i][mtype + "_tpr"][-1]
-        loss = history[i][mtype + "_loss"][-1]
+        (TP, FP, TN, FN) = history[i][mtype + "_metric"][idx]
+        auc = history[i][mtype + "_auc"][idx]
+        fpr = history[i][mtype + "_fpr"][idx]
+        tpr = history[i][mtype + "_tpr"][idx]
+        loss = history[i][mtype + "_loss"][idx]
 
         acc = (TP + TN) / (TP + FP + TN + FN)
 
@@ -387,6 +334,8 @@ def final_metric(history, path, mtype="train"):
         FPR.append(fpr)
         TPR.append(tpr)
 
+    if best_epoch:
+        print("***Best epoch***")
     print("\n[" + mtype + " average]\n")
     print("ACC: {:.2}".format((np.mean(ACC))))
     print("LOSS: {:.2}".format(np.mean(LOSS)))
@@ -414,6 +363,7 @@ def final_metric(history, path, mtype="train"):
         F1,
         MCC,
         AUC,
+        best_epoch,
     )
 
 
@@ -429,11 +379,15 @@ def save_metrics(
     F1,
     MCC,
     AUC,
+    best_epoch,
 ):
     """
     save metrics as csv files
     """
-    filename = mtype + "_metrics.txt"
+    if best_epoch:
+        filename = mtype + "_metrics_best.txt"
+    else:
+        filename = mtype + "_metrics.txt"
     file_path = os.path.join(path, filename)
     with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile, delimiter="\t")
@@ -518,30 +472,93 @@ def calc_avg(training_hist):
     return a1, a2, a3, a4
 
 
-def plot_roc(training_hist, fig_path, mtype="train"):
+def plot_roc(history, fig_path, best_epoch, mtype):
     """
     plot roc curve and save as png
     """
-    for i in range(len(training_hist)):
-        auc = training_hist[i][mtype + "_auc"][-1]
-        fpr = training_hist[i][mtype + "_fpr"][-1]
-        tpr = training_hist[i][mtype + "_tpr"][-1]
+    if best_epoch:
+        idx = best_epoch
+        filename = "best_" + mtype + "-roc.png"
+    else:
+        idx = -1
+        filename = mtype + "-roc.png"
 
-        plt.plot(fpr, tpr, label="Fold-" + str(i) + " AUC = %0.2f" % auc)
+    auc = history[mtype + "_auc"][idx]
+    fpr = history[mtype + "_fpr"][idx]
+    tpr = history[mtype + "_tpr"][idx]
+
+    plt.plot(fpr, tpr, label="AUC = %0.2f" % auc)
 
     plt.title(mtype + " roc curve")
-    plt.legend(loc="lower right")
     plt.plot([0, 1], [0, 1], "r--")
     plt.xlim([0, 1])
     plt.ylim([0, 1])
     plt.ylabel("True Positive Rate")
     plt.xlabel("False Positive Rate")
-    filename = mtype + "-roc.png"
-    plt.savefig(os.path.join(fig_path, filename))  # , bbox_inches="tight")
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches="tight")
     plt.close()
 
 
-def plot_figure(training_hist, fig_path):
+def plot_figure(
+    history,
+    fig_path,
+    best_epoch=None,
+):
+    # loss
+    plt.plot(
+        history["train_loss"],
+        label="train",
+    )
+
+    plt.plot(
+        history["valid_loss"],
+        label="valid",
+    )
+
+    plt.ylabel("loss")
+    plt.xlabel("epochs")
+    axes = plt.gca()
+    axes.set_ylim([0, 1])
+    plt.legend()
+    plt.title("training / valid loss vs iterations")
+    plt.grid()
+    if best_epoch:
+        filename = "best_loss.png"
+    else:
+        filename = "loss.png"
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches="tight")
+    plt.close()
+
+    # acc
+    plt.plot(
+        history["train_acc"],
+        label="train",
+    )
+
+    plt.plot(
+        history["valid_acc"],
+        label="valid",
+    )
+    plt.ylabel("acc")
+    plt.xlabel("epochs")
+    axes = plt.gca()
+    axes.set_ylim([0.5, 1])
+    plt.legend()
+    plt.title("training / valid acc vs iterations")
+    plt.grid()
+    if best_epoch:
+        filename = "best_acc.png"
+    else:
+        filename = "acc.png"
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches="tight")
+    plt.close()
+
+    # roc
+    plot_roc(history, fig_path, best_epoch, mtype="train")
+    plot_roc(history, fig_path, best_epoch, mtype="valid")
+
+
+def plot_figure_cv(training_hist, fig_path):
 
     a1, a2, a3, a4 = calc_avg(training_hist)
 
@@ -617,12 +634,46 @@ def plot_figure(training_hist, fig_path):
     plot_roc(training_hist, fig_path, mtype="valid")
 
 
-def tokenizing_for_bert_eval(sent_list, sent_label, tokenizer):
+def tokenizing_for_cv(train_list_x, train_list_y, tokenizer, train=True):
     """
     Tokenize abstracts and return data as Bert model input tensor.
     """
 
     print("tokenizing for bert input")
+
+    # save k-fold data by dict
+    # key: train + idx, value: tensor
+    input_ids_dict = {}
+    attention_masks_dict = {}
+    labels_dict = {}
+
+    # main process
+    # For every fold...
+    for idx in range(len(train_list_x)):
+
+        sent_list = train_list_x[idx]
+        sent_label = train_list_y[idx]
+
+        input_ids, attention_masks, labels = tokenizing(
+            sent_list, sent_label, tokenizer
+        )
+
+        if train:
+            input_ids_dict["tr_" + str(idx)] = input_ids
+            attention_masks_dict["tr_" + str(idx)] = attention_masks
+            labels_dict["tr_" + str(idx)] = labels
+        else:
+            input_ids_dict["va_" + str(idx)] = input_ids
+            attention_masks_dict["va_" + str(idx)] = attention_masks
+            labels_dict["va_" + str(idx)] = labels
+
+    return input_ids_dict, attention_masks_dict, labels_dict
+
+
+def tokenizing(sent_list, sent_label, tokenizer):
+    """
+    Main tokenizing process.
+    """
 
     # Tokenize all of the sentences and map the tokens to thier word IDs.
     input_ids_list = []
@@ -730,3 +781,54 @@ def tokenizing_for_bert_pred(sent_list, tokenizer):
     attention_masks = torch.cat(attention_masks_list, dim=0)
 
     return input_ids, attention_masks
+
+
+def final_metric(history, path, mtype="train", best_epoch=False):
+    """
+    Calculate metric.
+    """
+
+    if best_epoch:
+        idx = best_epoch
+    else:
+        idx = -1
+
+    (TP, FP, TN, FN) = history[mtype + "_metric"][idx]
+    auc = history[mtype + "_auc"][idx]
+    fpr = history[mtype + "_fpr"][idx]
+    tpr = history[mtype + "_tpr"][idx]
+    loss = history[mtype + "_loss"][idx]
+
+    acc = (TP + TN) / (TP + FP + TN + FN)
+
+    recall = TP / (TP + FN) if TP != 0 else 0  # 召回率是在所有正樣本當中，能夠預測多少正樣本的比例
+    specificity = TN / (TN + FP) if TN != 0 else 0  # 特異度是在所有負樣本當中，能夠預測多少負樣本的比例
+    precision = TP / (TP + FP) if TP != 0 else 0  # 準確率為在所有預測為正樣本中，有多少為正樣本
+    npv = TN / (TN + FN) if TN != 0 else 0  # npv為在所有預測為負樣本中，有多少為負樣本
+    f1 = (
+        (2 * recall * precision) / (recall + precision)
+        if (recall + precision) != 0
+        else 0
+    )  # F1-score則是兩者的調和平均數
+
+    mcc = (
+        (TP * TN - FP * FN) / np.sqrt(((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)))
+        if ((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)) != 0
+        else 0
+    )
+
+    if best_epoch:
+        print("***Best epoch***")
+    print("\n[" + mtype + " average]\n")
+    print("ACC: {:.2}".format((np.mean(acc))))
+    print("LOSS: {:.2}".format(np.mean(loss)))
+    print()
+    print("Recall: {:.2}".format(np.mean(recall)))
+    print("Specificity: {:.2}".format(np.mean(specificity)))
+    print("Precision: {:.2}".format(np.mean(precision)))
+    print("NPV: {:.2}".format(np.mean(npv)))
+    print()
+    print("F1: {:.2}".format(np.mean(f1)))
+    print("MCC: {:.2}".format(np.mean(mcc)))
+    print("AUC: {:.2}".format(np.mean(auc)))
+    print()
