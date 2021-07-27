@@ -64,7 +64,7 @@ if args.mode == "train":
 
     # setting path
     metric_path, model_path, history_path, fig_path = setting_path(
-        args.model, args.batch_size, args.epochs
+        args.model, args.batch_size, args.epochs, train="train"
     )
 
     # load data
@@ -202,7 +202,9 @@ if args.mode == "train":
             N_test=N_test,
             device=device,
             scheduler=scheduler,
+            path=model_path,
             epochs=args.epochs,
+            patience=3,
         )
 
         training_hist.append(history)
