@@ -6,6 +6,9 @@ from sklearn import metrics
 import matplotlib.pyplot as plt
 import numpy as np
 
+# import EarlyStopping
+from pytorchtools import EarlyStopping
+
 
 def get_device():
     """
@@ -207,7 +210,9 @@ def train_model(
     N_test,
     device,
     scheduler,
+    path,
     epochs=4,
+    patience=3,
 ):
     """
     train the BERT model.
@@ -237,6 +242,10 @@ def train_model(
         "valid_fpr": [],
         "valid_tpr": [],
     }
+
+    # initialize the early_stopping object
+    model_path = os.path.join(path, "model.pkl")
+    early_stopping = EarlyStopping(patience=patience, path=model_path, verbose=True)
 
     for _ in range(epochs):
         # training
@@ -309,6 +318,14 @@ def train_model(
             type="valid",
         )
 
+        # early_stopping needs the validation loss to check if it has decresed,
+        # and if it has, it will make a checkpoint of the current model
+        early_stopping(training_loss, model)
+
+        if early_stopping.early_stop:
+            print("Early stopping")
+            break
+
         print("=" * 25)
 
     return useful_stuff
@@ -333,7 +350,7 @@ def final_metric(history, path, mtype="train"):
 
     for i in range(len(history)):
 
-        (TP, FP, TN, FN) = history[i]["_metric"][-1]
+        (TP, FP, TN, FN) = history[i][mtype + "_metric"][-1]
         auc = history[i][mtype + "_auc"][-1]
         fpr = history[i][mtype + "_fpr"][-1]
         tpr = history[i][mtype + "_tpr"][-1]
@@ -388,7 +405,6 @@ def final_metric(history, path, mtype="train"):
     save_metrics(
         path,
         mtype,
-        train_metric,
         ACC,
         LOSS,
         RECALL,
@@ -417,9 +433,11 @@ def save_metrics(
     """
     save metrics as csv files
     """
-    with open(path, "w", newline="", encoding="utf-8") as csvfile:
+    filename = mtype + "_metrics.txt"
+    file_path = os.path.join(path, filename)
+    with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile, delimiter="\t")
-        writer.writerow(["\n[" + mtype + " average]\n"])
+        writer.writerow(["[" + mtype + " average]"])
         writer.writerow(["ACC: {:.2}".format((np.mean(ACC)))])
         writer.writerow(["LOSS: {:.2}".format(np.mean(LOSS))])
         writer.writerow(["Recall: {:.2}".format(np.mean(RECALL))])
@@ -431,17 +449,25 @@ def save_metrics(
         writer.writerow(["AUC: {:.2}".format(np.mean(AUC))])
 
 
-def setting_path(model_name, batch_size, epochs):
+def setting_path(model_name, batch_size, epochs, mode="train"):
     # setting path
     cwd = os.getcwd()
-    print("cwd", cwd)
+    print("cwd:", cwd)
 
     folder_name = model_name + "_bs_" + str(batch_size) + "_epo" + str(epochs)
 
-    metric_path = os.path.abspath(os.path.join(cwd, "result", folder_name, "metrics"))
-    model_path = os.path.abspath(os.path.join(cwd, "result", folder_name, "model"))
-    history_path = os.path.abspath(os.path.join(cwd, "result", folder_name, "history"))
-    fig_path = os.path.abspath(os.path.join(cwd, "result", folder_name, "figures"))
+    metric_path = os.path.abspath(
+        os.path.join(cwd, "result", folder_name, mode, "metrics")
+    )
+    model_path = os.path.abspath(
+        os.path.join(cwd, "result", folder_name, mode, "model")
+    )
+    history_path = os.path.abspath(
+        os.path.join(cwd, "result", folder_name, mode, "history")
+    )
+    fig_path = os.path.abspath(
+        os.path.join(cwd, "result", folder_name, mode, "figures")
+    )
 
     print("metric_path:", metric_path)
     print("model_path:", model_path)
@@ -589,3 +615,118 @@ def plot_figure(training_hist, fig_path):
     # roc
     plot_roc(training_hist, fig_path, mtype="train")
     plot_roc(training_hist, fig_path, mtype="valid")
+
+
+def tokenizing_for_bert_eval(sent_list, sent_label, tokenizer):
+    """
+    Tokenize abstracts and return data as Bert model input tensor.
+    """
+
+    print("tokenizing for bert input")
+
+    # Tokenize all of the sentences and map the tokens to thier word IDs.
+    input_ids_list = []
+    attention_masks_list = []
+    # For every sentence...
+    for sent in sent_list:
+        encoded_dict = tokenizer.encode_plus(
+            sent,  # Sentence to encode.
+            add_special_tokens=True,  # Add '[CLS]' and '[SEP]'
+            max_length=400,  # 512,  # Pad & truncate all sentences.
+            padding="max_length",
+            return_attention_mask=True,  # Construct attn. masks.
+            return_tensors="pt",  # Return pytorch tensors.
+            truncation=True,
+        )
+
+        # Add the encoded sentence to the list.
+        input_ids_list.append(encoded_dict["input_ids"])
+
+        # And its attention mask (simply differentiates padding from non-padding).
+        attention_masks_list.append(encoded_dict["attention_mask"])
+
+    # Convert the lists into tensors.
+    input_ids = torch.cat(input_ids_list, dim=0)
+    attention_masks = torch.cat(attention_masks_list, dim=0)
+    labels = torch.tensor(sent_label)
+
+    return input_ids, attention_masks, labels
+
+
+def eval_data(
+    model,
+    test_loader,
+    N_test,
+    device,
+):
+    """
+    eval the data.
+    """
+
+    useful_stuff = {
+        "test_loss": [],
+        "test_acc": [],
+        "test_auc": [],
+        "test_metric": [],
+        "test_fpr": [],
+        "test_tpr": [],
+    }
+
+    # evaluate test metrics
+    (
+        model,
+        correct,
+        training_loss,
+        (TP, FP, TN, FN),
+        y_list,
+        yhat_list,
+    ) = batch_iter(model, test_loader, None, None, device, training=False)
+
+    useful_stuff = calc_metrics(
+        N_test,
+        test_loader,
+        correct,
+        training_loss,
+        (TP, FP, TN, FN),
+        y_list,
+        yhat_list,
+        useful_stuff,
+        type="test",
+    )
+
+    return useful_stuff
+
+
+def tokenizing_for_bert_pred(sent_list, tokenizer):
+    """
+    Tokenize abstracts and return data as Bert model input tensor.
+    """
+
+    print("tokenizing for bert input")
+
+    # Tokenize all of the sentences and map the tokens to thier word IDs.
+    input_ids_list = []
+    attention_masks_list = []
+    # For every sentence...
+    for sent in sent_list:
+        encoded_dict = tokenizer.encode_plus(
+            sent,  # Sentence to encode.
+            add_special_tokens=True,  # Add '[CLS]' and '[SEP]'
+            max_length=400,  # 512,  # Pad & truncate all sentences.
+            padding="max_length",
+            return_attention_mask=True,  # Construct attn. masks.
+            return_tensors="pt",  # Return pytorch tensors.
+            truncation=True,
+        )
+
+        # Add the encoded sentence to the list.
+        input_ids_list.append(encoded_dict["input_ids"])
+
+        # And its attention mask (simply differentiates padding from non-padding).
+        attention_masks_list.append(encoded_dict["attention_mask"])
+
+    # Convert the lists into tensors.
+    input_ids = torch.cat(input_ids_list, dim=0)
+    attention_masks = torch.cat(attention_masks_list, dim=0)
+
+    return input_ids, attention_masks
