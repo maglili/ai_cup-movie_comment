@@ -254,7 +254,7 @@ else:
     device = get_device()
 
     # setting path
-    _, model_path, _, _ = setting_path(
+    metric_path, model_path, _, _ = setting_path(
         args.model_name, args.batch_size, args.epochs, args.mode
     )
 
