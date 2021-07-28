@@ -1,9 +1,9 @@
 import argparse
 import random
 import pickle
-from tqdm import tqdm
+import pandas as pd
 import torch
-from torch.utils.data import Dataset, DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -20,7 +20,7 @@ parser.add_argument(
     "--mode",
     nargs="?",
     type=str,
-    choices=["train", "eval"],
+    choices=["train", "test", "predict"],
     default="train",
     help="train model or evaluate data.",
 )
@@ -41,7 +41,7 @@ parser.add_argument(
     help="Number of training epochs.",
 )
 parser.add_argument(
-    "--model",
+    "--model_name",
     nargs="?",
     type=str,
     default="bert-base-cased",
@@ -50,21 +50,23 @@ parser.add_argument(
 args = parser.parse_args()
 # =================================argparser================================
 
-if args.mode == "train":
-    print("Mode:", args.mode)
+# keep reandom seed
+seed_val = 0
+random.seed(seed_val)
+np.random.seed(seed_val)
+torch.manual_seed(seed_val)
 
-    # keep reandom seed
-    seed_val = 0
-    random.seed(seed_val)
-    np.random.seed(seed_val)
-    torch.manual_seed(seed_val)
+if args.mode == "train":
 
     # check gpu
     device = get_device()
 
     # setting path
     metric_path, model_path, history_path, fig_path = setting_path(
-        args.model, args.batch_size, args.epochs, train="train"
+        args.model_name,
+        args.batch_size,
+        args.epochs,
+        args.mode,
     )
 
     path = "./data/train_valid_split/level_1/"
@@ -78,9 +80,8 @@ if args.mode == "train":
         y_va = pickle.load(f)
 
     # tokenize
-    tokenizer = AutoTokenizer.from_pretrained(args.model, do_lower_case=False)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name, do_lower_case=False)
 
-    # Hold-out, max_len = 400
     input_ids_tr, attention_masks_tr, labels_tr = tokenizing(
         X_tr.values, y_tr.values, tokenizer
     )
@@ -92,9 +93,9 @@ if args.mode == "train":
     Trainset = TensorDataset(input_ids_tr, attention_masks_tr, labels_tr)
     Validset = TensorDataset(input_ids_va, attention_masks_va, labels_va)
 
-    # training
+    # Training
     model = AutoModelForSequenceClassification.from_pretrained(
-        args.model,
+        args.model_name,
         num_labels=2,
         output_attentions=False,
         output_hidden_states=False,
@@ -133,6 +134,7 @@ if args.mode == "train":
             "weight_decay_rate": 0.0,
         },
     ]
+
     # Note - `optimizer_grouped_parameters` only includes the parameter values, not
     # the names.
 
@@ -148,7 +150,6 @@ if args.mode == "train":
     )
 
     train_loader = DataLoader(Trainset, shuffle=True, batch_size=args.batch_size)
-
     valid_loader = DataLoader(Validset, shuffle=False, batch_size=args.batch_size)
 
     # Total number of training steps is [number of batches] x [number of epochs].
@@ -175,18 +176,131 @@ if args.mode == "train":
 
     # save trainin_history
     with open(os.path.join(history_path, "hist.pkl"), "wb") as f:
-        pickle.dump(training_hist, f)
-
-    # save model
-    torch.save(model.state_dict(), os.path.join(model_path, "model.pkl"))
+        pickle.dump(history, f)
 
     # metric
-    final_metric(training_hist, metric_path=metric_path, mtype="train")
-    final_metric(training_hist, metric_path=metric_path, mtype="valid")
+    tr_metric = final_metric(history, mtype="train", best_epoch=best_epoch)
+    va_metric = final_metric(history, mtype="valid", best_epoch=best_epoch)
+    save_metrics(metric_path, "train", best_epoch=None, **tr_metric)
+    save_metrics(metric_path, "valid", best_epoch=None, **va_metric)
 
     # plot learning curve
-    plot_figure(training_hist, fig_path)
+    plot_lr("acc", history, fig_path=fig_path, best_epoch=best_epoch, show=False)
+    plot_lr("loss", history, fig_path=fig_path, best_epoch=best_epoch, show=False)
+    plot_roc(history, fig_path=fig_path, best_epoch=best_epoch, show=False)
 
+
+elif args.mode == "test":
+    # load data
+    with open("./data/train_test_split/X_te.pkl", "rb") as f:
+        X_test = pickle.load(f)
+    with open("./data/train_test_split/y_te.pkl", "rb") as f:
+        y_test = pickle.load(f)
+
+    # check gpu
+    device = get_device()
+
+    # setting path
+    metric_path, model_path, history_path, _ = setting_path(
+        args.model_name, args.batch_size, args.epochs, args.mode
+    )
+
+    # tokenize
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name, do_lower_case=False)
+    input_ids_te, attention_masks_te, labels_te = tokenizing(
+        X_test.values, y_test.values, tokenizer
+    )
+
+    # dataset
+    testdataset = TensorDataset(input_ids_te, attention_masks_te, labels_te)
+    print("test dataset:", len(testdataset))
+
+    # load in model
+    model = AutoModelForSequenceClassification.from_pretrained(
+        args.model_name,
+        num_labels=2,
+        output_attentions=False,
+        output_hidden_states=False,
+    )
+    model.to(device)
+    PATH = os.path.join(model_path, "model.pkl")
+    model.load_state_dict(torch.load(PATH))
+
+    # evaluate
+    N_test = len(testdataset)
+    test_loader = DataLoader(testdataset, shuffle=False, batch_size=16)
+
+    history = eval_model(
+        model=model,
+        test_loader=test_loader,
+        N_test=N_test,
+        device=device,
+    )
+
+    # save trainin_history
+    with open(os.path.join(history_path, "hist.pkl"), "wb") as f:
+        pickle.dump(history, f)
+
+    # save metric
+    te_metric = final_metric(history, mtype="test")
+    save_metrics(metric_path, "test", best_epoch=None, **te_metric)
 
 else:
-    print("Mode:", args.mode)
+    with open("./data/test_rm_br.pkl", "rb") as f:
+        test = pickle.load(f)
+    test_data = test["review"].values
+
+    # check gpu
+    device = get_device()
+
+    # setting path
+    _, model_path, _, _ = setting_path(
+        args.model_name, args.batch_size, args.epochs, args.mode
+    )
+
+    # tokenize
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name, do_lower_case=False)
+    input_ids, attention_masks, _ = tokenizing(test_data, None, tokenizer)
+
+    # dataset
+    testdataset = TensorDataset(input_ids, attention_masks)
+    print("Prediction dataset:", len(testdataset))
+
+    # load in model
+    model = AutoModelForSequenceClassification.from_pretrained(
+        args.model_name,
+        num_labels=2,
+        output_attentions=False,
+        output_hidden_states=False,
+    )
+    model.to(device)
+    PATH = os.path.join(model_path, "model.pkl")
+    model.load_state_dict(torch.load(PATH))
+
+    # loader
+    test_loader = DataLoader(testdataset, shuffle=False, batch_size=16)
+
+    # prediction
+    pred = []
+    model.eval()
+    with torch.no_grad():
+        for batch in test_loader:
+            b_input_ids = batch[0].to(device)
+            b_input_mask = batch[1].to(device)
+
+            output = model(b_input_ids, attention_mask=b_input_mask)
+            logits = output[0]
+
+            _, yhat = torch.max(logits.data, 1)
+
+            pred.extend(yhat.cpu().detach().numpy())
+
+    print("Answer and prediction have same length:", len(pred) == len(test))
+
+    # save result
+    path = os.path.abspath(os.path.join(metric_path, ".."))
+    print("output:", path)
+    submission = pd.DataFrame({"ID": test["ID"].values, "sentiment": pred})
+    submission.to_csv(
+        os.path.join(path, "submission.csv"), encoding="utf-8", index=False
+    )

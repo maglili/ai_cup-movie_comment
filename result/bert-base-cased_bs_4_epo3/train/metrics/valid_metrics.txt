@@ -1,6 +1,6 @@
 [valid average]
 ACC: 0.2
-LOSS: 0.73
+LOSS: 0.72
 Recall: 0.0
 Specificity: 1.0
 Precision: 0.0

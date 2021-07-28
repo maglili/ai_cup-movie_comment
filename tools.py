@@ -26,6 +26,74 @@ def get_device():
     return device
 
 
+def setting_path(model_name, batch_size, epochs, mode="train"):
+    # setting path
+    cwd = os.getcwd()
+    folder_name = model_name + "_bs_" + str(batch_size) + "_epo" + str(epochs)
+
+    if mode == "train":
+        model_path = os.path.abspath(
+            os.path.join(cwd, "result", folder_name, "train", "model")
+        )
+        metric_path = os.path.abspath(
+            os.path.join(cwd, "result", folder_name, mode, "metrics")
+        )
+        history_path = os.path.abspath(
+            os.path.join(cwd, "result", folder_name, mode, "history")
+        )
+        fig_path = os.path.abspath(
+            os.path.join(cwd, "result", folder_name, mode, "figures")
+        )
+        # Crate path if folder not exists.
+        if not os.path.isdir(fig_path):
+            os.makedirs(fig_path)
+        if not os.path.isdir(model_path):
+            os.makedirs(model_path)
+        if not os.path.isdir(metric_path):
+            os.makedirs(metric_path)
+        if not os.path.isdir(history_path):
+            os.makedirs(history_path)
+
+    elif mode == "test":
+        model_path = os.path.abspath(
+            os.path.join(cwd, "result", folder_name, "train", "model")
+        )
+        history_path = os.path.abspath(
+            os.path.join(cwd, "result", folder_name, mode, "history")
+        )
+        metric_path = os.path.abspath(
+            os.path.join(cwd, "result", folder_name, mode, "metrics")
+        )
+        fig_path = None
+        # Crate path if folder not exists.
+        if not os.path.isdir(model_path):
+            os.makedirs(model_path)
+        if not os.path.isdir(metric_path):
+            os.makedirs(metric_path)
+        if not os.path.isdir(history_path):
+            os.makedirs(history_path)
+
+    elif mode == "predict":
+        data_path = os.path.abspath(os.path.join(cwd, "result", folder_name, mode))
+        model_path = os.path.abspath(
+            os.path.join(cwd, "result", folder_name, "train", "model")
+        )
+        metric_path = os.path.abspath(
+            os.path.join(cwd, "result", folder_name, mode, "metrics")
+        )
+        history_path = None
+        fig_path = None
+        if not os.path.isdir(data_path):
+            os.makedirs(data_path)
+
+    print("metric_path:", metric_path)
+    print("model_path:", model_path)
+    print("history_path:", history_path)
+    print("fig_path:", fig_path)
+
+    return metric_path, model_path, history_path, fig_path
+
+
 def batch_iter(model, dataloader, optimizer, scheduler, device, training=True):
 
     correct = 0
@@ -273,113 +341,11 @@ def train_model(
     return useful_stuff, early_stopping.best_epoch
 
 
-def final_metric_cv(history, path, mtype="train", best_epoch=False):
-    """
-    Calculate metric.
-    """
-    # init
-    ACC = []
-    LOSS = []
-    RECALL = []
-    SPECIFICITY = []
-    PRECISION = []
-    NPV = []
-    F1 = []
-    MCC = []
-    AUC = []
-    FPR = []
-    TPR = []
-
-    if best_epoch:
-        idx = best_epoch
-    else:
-        idx = -1
-
-    for i in range(len(history)):
-
-        (TP, FP, TN, FN) = history[i][mtype + "_metric"][idx]
-        auc = history[i][mtype + "_auc"][idx]
-        fpr = history[i][mtype + "_fpr"][idx]
-        tpr = history[i][mtype + "_tpr"][idx]
-        loss = history[i][mtype + "_loss"][idx]
-
-        acc = (TP + TN) / (TP + FP + TN + FN)
-
-        recall = TP / (TP + FN) if TP != 0 else 0  # 召回率是在所有正樣本當中，能夠預測多少正樣本的比例
-        specificity = TN / (TN + FP) if TN != 0 else 0  # 特異度是在所有負樣本當中，能夠預測多少負樣本的比例
-        precision = TP / (TP + FP) if TP != 0 else 0  # 準確率為在所有預測為正樣本中，有多少為正樣本
-        npv = TN / (TN + FN) if TN != 0 else 0  # npv為在所有預測為負樣本中，有多少為負樣本
-        f1 = (
-            (2 * recall * precision) / (recall + precision)
-            if (recall + precision) != 0
-            else 0
-        )  # F1-score則是兩者的調和平均數
-
-        mcc = (
-            (TP * TN - FP * FN)
-            / np.sqrt(((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)))
-            if ((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)) != 0
-            else 0
-        )
-
-        ACC.append(acc)
-        LOSS.append(loss)
-        RECALL.append(recall)
-        SPECIFICITY.append(specificity)
-        PRECISION.append(precision)
-        NPV.append(npv)
-        F1.append(f1)
-        MCC.append(mcc)
-        AUC.append(auc)
-        FPR.append(fpr)
-        TPR.append(tpr)
-
-    if best_epoch:
-        print("***Best epoch***")
-    print("\n[" + mtype + " average]\n")
-    print("ACC: {:.2}".format((np.mean(ACC))))
-    print("LOSS: {:.2}".format(np.mean(LOSS)))
-    print()
-    print("Recall: {:.2}".format(np.mean(RECALL)))
-    print("Specificity: {:.2}".format(np.mean(SPECIFICITY)))
-    print("Precision: {:.2}".format(np.mean(PRECISION)))
-    print("NPV: {:.2}".format(np.mean(NPV)))
-    print()
-    print("F1: {:.2}".format(np.mean(F1)))
-    print("MCC: {:.2}".format(np.mean(MCC)))
-    print("AUC: {:.2}".format(np.mean(AUC)))
-    print()
-
-    # save result
-    save_metrics(
-        path,
-        mtype,
-        ACC,
-        LOSS,
-        RECALL,
-        SPECIFICITY,
-        PRECISION,
-        NPV,
-        F1,
-        MCC,
-        AUC,
-        best_epoch,
-    )
-
-
 def save_metrics(
     path,
     mtype,
-    ACC,
-    LOSS,
-    RECALL,
-    SPECIFICITY,
-    PRECISION,
-    NPV,
-    F1,
-    MCC,
-    AUC,
-    best_epoch,
+    best_epoch=None,
+    **metrics,
 ):
     """
     save metrics as csv files
@@ -392,282 +358,145 @@ def save_metrics(
     with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile, delimiter="\t")
         writer.writerow(["[" + mtype + " average]"])
-        writer.writerow(["ACC: {:.2}".format((np.mean(ACC)))])
-        writer.writerow(["LOSS: {:.2}".format(np.mean(LOSS))])
-        writer.writerow(["Recall: {:.2}".format(np.mean(RECALL))])
-        writer.writerow(["Specificity: {:.2}".format(np.mean(SPECIFICITY))])
-        writer.writerow(["Precision: {:.2}".format(np.mean(PRECISION))])
-        writer.writerow(["NPV: {:.2}".format(np.mean(NPV))])
-        writer.writerow(["F1: {:.2}".format(np.mean(F1))])
-        writer.writerow(["MCC: {:.2}".format(np.mean(MCC))])
-        writer.writerow(["AUC: {:.2}".format(np.mean(AUC))])
+        writer.writerow(["ACC: {:.2}".format(metrics["acc"])])
+        writer.writerow(["LOSS: {:.2}".format(metrics["loss"])])
+        writer.writerow(["Recall: {:.2}".format(metrics["recall"])])
+        writer.writerow(["Specificity: {:.2}".format(metrics["specificity"])])
+        writer.writerow(["Precision: {:.2}".format(metrics["precision"])])
+        writer.writerow(["NPV: {:.2}".format(metrics["npv"])])
+        writer.writerow(["F1: {:.2}".format(metrics["f1"])])
+        writer.writerow(["MCC: {:.2}".format(metrics["mcc"])])
+        writer.writerow(["AUC: {:.2}".format(metrics["auc"])])
 
 
-def setting_path(model_name, batch_size, epochs, mode="train"):
-    # setting path
-    cwd = os.getcwd()
-    print("cwd:", cwd)
-
-    folder_name = model_name + "_bs_" + str(batch_size) + "_epo" + str(epochs)
-
-    metric_path = os.path.abspath(
-        os.path.join(cwd, "result", folder_name, mode, "metrics")
-    )
-    model_path = os.path.abspath(
-        os.path.join(cwd, "result", folder_name, mode, "model")
-    )
-    history_path = os.path.abspath(
-        os.path.join(cwd, "result", folder_name, mode, "history")
-    )
-    fig_path = os.path.abspath(
-        os.path.join(cwd, "result", folder_name, mode, "figures")
-    )
-
-    print("metric_path:", metric_path)
-    print("model_path:", model_path)
-    print("history_path:", history_path)
-    print("fig_path:", fig_path)
-
-    if not os.path.isdir(metric_path):
-        os.makedirs(metric_path)
-    if not os.path.isdir(model_path):
-        os.makedirs(model_path)
-    if not os.path.isdir(history_path):
-        os.makedirs(history_path)
-    if not os.path.isdir(fig_path):
-        os.makedirs(fig_path)
-
-    return metric_path, model_path, history_path, fig_path
-
-
-def calc_avg(training_hist):
+def final_metric(history, mtype="train", best_epoch=None):
     """
-    Plot learning curve
+    Calculate metric.
     """
 
-    a1 = a2 = a3 = a4 = []  # init
+    if best_epoch:
+        idx = best_epoch
+    else:
+        idx = -1
 
-    for i in range(len(training_hist)):
-        if i == 0:
-            a1 = np.array(training_hist[0]["train_loss"].copy())
-            a2 = np.array(training_hist[0]["valid_loss"].copy())
-            a3 = np.array(training_hist[0]["train_acc"].copy())
-            a4 = np.array(training_hist[0]["valid_acc"].copy())
-            continue
-        a1 = a1 + np.array(training_hist[i]["train_loss"])
-        a2 = a2 + np.array(training_hist[i]["valid_loss"])
-        a3 = a3 + np.array(training_hist[i]["train_acc"])
-        a4 = a4 + np.array(training_hist[i]["valid_acc"])
+    # get metrics value
+    (TP, FP, TN, FN) = history[mtype + "_metric"][idx]
+    auc = history[mtype + "_auc"][idx]
+    loss = history[mtype + "_loss"][idx]
 
-    a1 /= len(training_hist)
-    a2 /= len(training_hist)
-    a3 /= len(training_hist)
-    a4 /= len(training_hist)
+    # calc metric
+    acc = (TP + TN) / (TP + FP + TN + FN)
+    recall = TP / (TP + FN) if TP != 0 else 0.0  # 召回率是在所有正樣本當中，能夠預測多少正樣本的比例
+    specificity = TN / (TN + FP) if TN != 0 else 0.0  # 特異度是在所有負樣本當中，能夠預測多少負樣本的比例
+    precision = TP / (TP + FP) if TP != 0 else 0.0  # 準確率為在所有預測為正樣本中，有多少為正樣本
+    npv = TN / (TN + FN) if TN != 0 else 0.0  # npv為在所有預測為負樣本中，有多少為負樣本
+    f1 = (
+        (2 * recall * precision) / (recall + precision)
+        if (recall + precision) != 0.0
+        else 0.0
+    )  # F1-score則是兩者的調和平均數
+    mcc = (
+        (TP * TN - FP * FN) / np.sqrt(((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)))
+        if ((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)) != 0
+        else 0.0
+    )
 
-    a1 = a1.tolist()
-    a2 = a2.tolist()
-    a3 = a3.tolist()
-    a4 = a4.tolist()
+    print("\n[" + mtype + " average]\n")
+    print("ACC: {:.2}".format(acc))
+    print("LOSS: {:.2}".format(loss))
+    print()
+    print("Recall: {:.2}".format(recall))
+    print("Specificity: {:.2}".format(specificity))
+    print("Precision: {:.2}".format(precision))
+    print("NPV: {:.2}".format(npv))
+    print()
+    print("F1: {:.2}".format(f1))
+    print("MCC: {:.2}".format(mcc))
+    print("AUC: {:.2}".format(auc))
+    print()
 
-    return a1, a2, a3, a4
+    return {
+        "acc": acc,
+        "loss": loss,
+        "recall": recall,
+        "specificity": specificity,
+        "precision": precision,
+        "npv": npv,
+        "f1": f1,
+        "mcc": mcc,
+        "auc": auc,
+    }
 
 
-def plot_roc(history, fig_path, best_epoch, mtype):
+def plot_roc(history, fig_path="./", best_epoch=None, show=False):
     """
     plot roc curve and save as png
     """
     if best_epoch:
         idx = best_epoch
-        filename = "best_" + mtype + "-roc.png"
+        filename = "roc_best.png"
     else:
         idx = -1
-        filename = mtype + "-roc.png"
+        filename = "roc.png"
 
-    auc = history[mtype + "_auc"][idx]
-    fpr = history[mtype + "_fpr"][idx]
-    tpr = history[mtype + "_tpr"][idx]
+    # train
+    tr_auc = history["train_auc"][idx]
+    tr_fpr = history["train_fpr"][idx]
+    tr_tpr = history["train_tpr"][idx]
+    plt.plot(tr_fpr, tr_tpr, label="Train AUC = %0.2f" % tr_auc)
 
-    plt.plot(fpr, tpr, label="AUC = %0.2f" % auc)
+    # valid
+    va_auc = history["valid_auc"][idx]
+    va_fpr = history["valid_fpr"][idx]
+    va_tpr = history["valid_tpr"][idx]
+    plt.plot(va_fpr, va_tpr, label="valid AUC = %0.2f" % va_auc)
 
-    plt.title(mtype + " roc curve")
+    plt.title("ROC")
     plt.plot([0, 1], [0, 1], "r--")
     plt.xlim([0, 1])
     plt.ylim([0, 1])
     plt.ylabel("True Positive Rate")
     plt.xlabel("False Positive Rate")
     plt.savefig(os.path.join(fig_path, filename), bbox_inches="tight")
+    plt.legend()
+    if show:
+        plt.show()
     plt.close()
 
 
-def plot_figure(
-    history,
-    fig_path,
-    best_epoch=None,
-):
-    # loss
+def plot_lr(metric, history, fig_path="./", best_epoch=None, show=False):
+    metric = metric.lower()
+    if best_epoch:
+        plt.axvline(x=best_epoch, color="r", linestyle="--", label="early stopping")
+    # train
     plt.plot(
-        history["train_loss"],
+        history["train_" + metric],
         label="train",
     )
-
+    # valid
     plt.plot(
-        history["valid_loss"],
+        history["valid_" + metric],
         label="valid",
     )
 
-    plt.ylabel("loss")
+    plt.ylabel(metric)
     plt.xlabel("epochs")
     axes = plt.gca()
-    axes.set_ylim([0, 1])
+    if metric == "acc":
+        axes.set_ylim([0.5, 1])
+    else:
+        axes.set_ylim([0, 1])
     plt.legend()
-    plt.title("training / valid loss vs iterations")
+    plt.title("training / valid " + metric + " vs iterations")
     plt.grid()
     if best_epoch:
-        filename = "best_loss.png"
+        filename = metric + "_best.png"
     else:
-        filename = "loss.png"
+        filename = metric + ".png"
     plt.savefig(os.path.join(fig_path, filename), bbox_inches="tight")
+    if show:
+        plt.show()
     plt.close()
-
-    # acc
-    plt.plot(
-        history["train_acc"],
-        label="train",
-    )
-
-    plt.plot(
-        history["valid_acc"],
-        label="valid",
-    )
-    plt.ylabel("acc")
-    plt.xlabel("epochs")
-    axes = plt.gca()
-    axes.set_ylim([0.5, 1])
-    plt.legend()
-    plt.title("training / valid acc vs iterations")
-    plt.grid()
-    if best_epoch:
-        filename = "best_acc.png"
-    else:
-        filename = "acc.png"
-    plt.savefig(os.path.join(fig_path, filename), bbox_inches="tight")
-    plt.close()
-
-    # roc
-    plot_roc(history, fig_path, best_epoch, mtype="train")
-    plot_roc(history, fig_path, best_epoch, mtype="valid")
-
-
-def plot_figure_cv(training_hist, fig_path):
-
-    a1, a2, a3, a4 = calc_avg(training_hist)
-
-    # color
-    tr_color = ["#2ff5f2", "#2ff5e8", "#2ff5c0", "#2fbdf5", "#2f99f5"]
-    val_color = ["#f5952f", "#f5ac2f", "#f5c02f", "#f5d72f", "#f5ee2f"]
-
-    # train loss
-    for idx in range(len(training_hist)):
-        plt.plot(
-            training_hist[idx]["train_loss"],
-            "--",
-            alpha=0.6,
-            label="train" + str(idx),
-            # color=color,
-        )
-    plt.plot(a1, label="average training")
-
-    # valid loss
-    for idx in range(len(training_hist)):
-        plt.plot(
-            training_hist[idx]["valid_loss"],
-            "--",
-            alpha=0.6,
-            label="valid" + str(idx),
-            # color=color,
-        )
-
-    plt.plot(a2, label="average valid")
-    plt.ylabel("loss")
-    plt.xlabel("epochs")
-    axes = plt.gca()
-    axes.set_ylim([0, 1])
-    plt.legend()
-    plt.title("training / valid loss vs iterations")
-    plt.grid()
-    plt.savefig(os.path.join(fig_path, "loss.png"))  # , bbox_inches="tight")
-    plt.close()
-
-    # train acc
-    for idx in range(len(training_hist)):
-        plt.plot(
-            training_hist[idx]["train_acc"],
-            "--",
-            alpha=0.6,
-            label="train" + str(idx),
-            # color=color,
-        )
-    plt.plot(a3, label="average training")
-
-    # valid acc
-    for idx in range(len(training_hist)):
-        plt.plot(
-            training_hist[idx]["valid_acc"],
-            "--",
-            alpha=0.6,
-            label="valid" + str(idx),
-            # color=color,
-        )
-    plt.plot(a4, label="average valid")
-    plt.ylabel("acc")
-    plt.xlabel("epochs")
-    axes = plt.gca()
-    axes.set_ylim([0.5, 1])
-    plt.legend()
-    plt.title("training / valid acc vs iterations")
-    plt.grid()
-    plt.savefig(os.path.join(fig_path, "acc.png"))  # , bbox_inches="tight")
-    plt.close()
-
-    # roc
-    plot_roc(training_hist, fig_path, mtype="train")
-    plot_roc(training_hist, fig_path, mtype="valid")
-
-
-def tokenizing_for_cv(train_list_x, train_list_y, tokenizer, train=True):
-    """
-    Tokenize abstracts and return data as Bert model input tensor.
-    """
-
-    print("tokenizing for bert input")
-
-    # save k-fold data by dict
-    # key: train + idx, value: tensor
-    input_ids_dict = {}
-    attention_masks_dict = {}
-    labels_dict = {}
-
-    # main process
-    # For every fold...
-    for idx in range(len(train_list_x)):
-
-        sent_list = train_list_x[idx]
-        sent_label = train_list_y[idx]
-
-        input_ids, attention_masks, labels = tokenizing(
-            sent_list, sent_label, tokenizer
-        )
-
-        if train:
-            input_ids_dict["tr_" + str(idx)] = input_ids
-            attention_masks_dict["tr_" + str(idx)] = attention_masks
-            labels_dict["tr_" + str(idx)] = labels
-        else:
-            input_ids_dict["va_" + str(idx)] = input_ids
-            attention_masks_dict["va_" + str(idx)] = attention_masks
-            labels_dict["va_" + str(idx)] = labels
-
-    return input_ids_dict, attention_masks_dict, labels_dict
 
 
 def tokenizing(sent_list, sent_label, tokenizer):
@@ -699,12 +528,15 @@ def tokenizing(sent_list, sent_label, tokenizer):
     # Convert the lists into tensors.
     input_ids = torch.cat(input_ids_list, dim=0)
     attention_masks = torch.cat(attention_masks_list, dim=0)
-    labels = torch.tensor(sent_label)
+    if sent_label is not None:
+        labels = torch.tensor(sent_label)
+    else:
+        labels = None
 
     return input_ids, attention_masks, labels
 
 
-def eval_data(
+def eval_model(
     model,
     test_loader,
     N_test,
@@ -742,93 +574,7 @@ def eval_data(
         y_list,
         yhat_list,
         useful_stuff,
-        type="test",
+        mtype="test",
     )
 
     return useful_stuff
-
-
-def tokenizing_for_bert_pred(sent_list, tokenizer):
-    """
-    Tokenize abstracts and return data as Bert model input tensor.
-    """
-
-    print("tokenizing for bert input")
-
-    # Tokenize all of the sentences and map the tokens to thier word IDs.
-    input_ids_list = []
-    attention_masks_list = []
-    # For every sentence...
-    for sent in sent_list:
-        encoded_dict = tokenizer.encode_plus(
-            sent,  # Sentence to encode.
-            add_special_tokens=True,  # Add '[CLS]' and '[SEP]'
-            max_length=400,  # 512,  # Pad & truncate all sentences.
-            padding="max_length",
-            return_attention_mask=True,  # Construct attn. masks.
-            return_tensors="pt",  # Return pytorch tensors.
-            truncation=True,
-        )
-
-        # Add the encoded sentence to the list.
-        input_ids_list.append(encoded_dict["input_ids"])
-
-        # And its attention mask (simply differentiates padding from non-padding).
-        attention_masks_list.append(encoded_dict["attention_mask"])
-
-    # Convert the lists into tensors.
-    input_ids = torch.cat(input_ids_list, dim=0)
-    attention_masks = torch.cat(attention_masks_list, dim=0)
-
-    return input_ids, attention_masks
-
-
-def final_metric(history, path, mtype="train", best_epoch=False):
-    """
-    Calculate metric.
-    """
-
-    if best_epoch:
-        idx = best_epoch
-    else:
-        idx = -1
-
-    (TP, FP, TN, FN) = history[mtype + "_metric"][idx]
-    auc = history[mtype + "_auc"][idx]
-    fpr = history[mtype + "_fpr"][idx]
-    tpr = history[mtype + "_tpr"][idx]
-    loss = history[mtype + "_loss"][idx]
-
-    acc = (TP + TN) / (TP + FP + TN + FN)
-
-    recall = TP / (TP + FN) if TP != 0 else 0  # 召回率是在所有正樣本當中，能夠預測多少正樣本的比例
-    specificity = TN / (TN + FP) if TN != 0 else 0  # 特異度是在所有負樣本當中，能夠預測多少負樣本的比例
-    precision = TP / (TP + FP) if TP != 0 else 0  # 準確率為在所有預測為正樣本中，有多少為正樣本
-    npv = TN / (TN + FN) if TN != 0 else 0  # npv為在所有預測為負樣本中，有多少為負樣本
-    f1 = (
-        (2 * recall * precision) / (recall + precision)
-        if (recall + precision) != 0
-        else 0
-    )  # F1-score則是兩者的調和平均數
-
-    mcc = (
-        (TP * TN - FP * FN) / np.sqrt(((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)))
-        if ((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)) != 0
-        else 0
-    )
-
-    if best_epoch:
-        print("***Best epoch***")
-    print("\n[" + mtype + " average]\n")
-    print("ACC: {:.2}".format((np.mean(acc))))
-    print("LOSS: {:.2}".format(np.mean(loss)))
-    print()
-    print("Recall: {:.2}".format(np.mean(recall)))
-    print("Specificity: {:.2}".format(np.mean(specificity)))
-    print("Precision: {:.2}".format(np.mean(precision)))
-    print("NPV: {:.2}".format(np.mean(npv)))
-    print()
-    print("F1: {:.2}".format(np.mean(f1)))
-    print("MCC: {:.2}".format(np.mean(mcc)))
-    print("AUC: {:.2}".format(np.mean(auc)))
-    print()
