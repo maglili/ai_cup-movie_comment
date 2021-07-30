@@ -99,7 +99,7 @@ if args.mode == "train":
         num_labels=2,
         output_attentions=False,
         output_hidden_states=False,
-        hidden_dropout_prob=0.35,
+        hidden_dropout_prob=0.25,
         attention_probs_dropout_prob=0.25,
     )
     model.to(device)
@@ -173,6 +173,7 @@ if args.mode == "train":
         epochs=args.epochs,
         patience=3,
     )
+    print("best_epoch:", best_epoch)
 
     # save trainin_history
     with open(os.path.join(history_path, "hist.pkl"), "wb") as f:
@@ -181,12 +182,18 @@ if args.mode == "train":
     # metric
     tr_metric = final_metric(history, mtype="train", best_epoch=best_epoch)
     va_metric = final_metric(history, mtype="valid", best_epoch=best_epoch)
+    save_metrics(metric_path, "train", best_epoch=best_epoch, **tr_metric)
+    save_metrics(metric_path, "valid", best_epoch=best_epoch, **va_metric)
+    print("=" * 10)
+    tr_metric = final_metric(history, mtype="train", best_epoch=None)
+    va_metric = final_metric(history, mtype="valid", best_epoch=None)
     save_metrics(metric_path, "train", best_epoch=None, **tr_metric)
     save_metrics(metric_path, "valid", best_epoch=None, **va_metric)
 
     # plot learning curve
     plot_lr("acc", history, fig_path=fig_path, best_epoch=best_epoch, show=False)
     plot_lr("loss", history, fig_path=fig_path, best_epoch=best_epoch, show=False)
+    plot_roc(history, fig_path=fig_path, best_epoch=None, show=False)
     plot_roc(history, fig_path=fig_path, best_epoch=best_epoch, show=False)
 
 

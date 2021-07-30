@@ -1,0 +1,10 @@
+[train average]
+ACC: 0.9
+LOSS: 0.3
+Recall: 0.86
+Specificity: 0.94
+Precision: 0.93
+NPV: 0.87
+F1: 0.9
+MCC: 0.8
+AUC: 0.97

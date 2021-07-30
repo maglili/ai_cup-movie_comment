@@ -204,8 +204,9 @@ def save_result(useful_stuff, acc, loss, confusion_matrix, auc, fpr, tpr, type):
     useful_stuff[type + "_fpr"].append(fpr)
     useful_stuff[type + "_tpr"].append(tpr)
 
-    print(type + " loss: {0:.2f}".format(loss))
     print(type + " acc: {0:.2f}".format(acc))
+    print(type + " loss: {0:.2f}".format(loss))
+    print(type + " auc: {0:.2f}".format(auc))
     print("-" * 25)
 
     return useful_stuff
@@ -350,7 +351,7 @@ def save_metrics(
     """
     save metrics as csv files
     """
-    if best_epoch:
+    if best_epoch != None:
         filename = mtype + "_metrics_best.txt"
     else:
         filename = mtype + "_metrics.txt"
@@ -374,7 +375,7 @@ def final_metric(history, mtype="train", best_epoch=None):
     Calculate metric.
     """
 
-    if best_epoch:
+    if best_epoch != None:
         idx = best_epoch
     else:
         idx = -1
@@ -432,7 +433,7 @@ def plot_roc(history, fig_path="./", best_epoch=None, show=False):
     """
     plot roc curve and save as png
     """
-    if best_epoch:
+    if best_epoch != None:
         idx = best_epoch
         filename = "roc_best.png"
     else:
@@ -457,8 +458,8 @@ def plot_roc(history, fig_path="./", best_epoch=None, show=False):
     plt.ylim([0, 1])
     plt.ylabel("True Positive Rate")
     plt.xlabel("False Positive Rate")
-    plt.savefig(os.path.join(fig_path, filename), bbox_inches="tight")
     plt.legend()
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches="tight")
     if show:
         plt.show()
     plt.close()
@@ -466,7 +467,7 @@ def plot_roc(history, fig_path="./", best_epoch=None, show=False):
 
 def plot_lr(metric, history, fig_path="./", best_epoch=None, show=False):
     metric = metric.lower()
-    if best_epoch:
+    if best_epoch != None:
         plt.axvline(x=best_epoch, color="r", linestyle="--", label="early stopping")
     # train
     plt.plot(
