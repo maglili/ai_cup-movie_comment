@@ -17,6 +17,9 @@
 
 ```bash
 python main.py -m train -bs 8 -epo 10 --model_name bert-base-cased
+# python main.py -m train -bs 8 -epo 10 --model_name roberta-base
+# python main.py -m train -bs 8 -epo 10 --model_name xlnet-base-cased
+# python main.py -m train -bs 8 -epo 10 --model_name google/electra-base-discriminator
 ```
 
 **Test:**

@@ -101,6 +101,8 @@ if args.mode == "train":
         output_hidden_states=False,
         hidden_dropout_prob=0.25,
         attention_probs_dropout_prob=0.25,
+        # dropout=0.25,  # xlnet
+        # summary_last_dropout=0.25,  # xlnet
     )
     model.to(device)
 

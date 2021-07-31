@@ -1,4 +1,5 @@
 import os
+import re
 import csv
 import torch
 import torch.nn.functional as F
@@ -29,6 +30,8 @@ def get_device():
 def setting_path(model_name, batch_size, epochs, mode="train"):
     # setting path
     cwd = os.getcwd()
+    if "/" in model_name:
+        model_name = re.sub("/", "_", model_name)
     folder_name = model_name + "_bs_" + str(batch_size) + "_epo" + str(epochs)
 
     if mode == "train":
