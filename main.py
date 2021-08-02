@@ -20,7 +20,7 @@ parser.add_argument(
     "--mode",
     nargs="?",
     type=str,
-    choices=["train", "test", "predict"],
+    choices=["train", "test", "predict", "l2"],
     default="train",
     help="train model or evaluate data.",
 )
@@ -47,6 +47,12 @@ parser.add_argument(
     default="bert-base-cased",
     help="Huggingface model name",
 )
+parser.add_argument(
+    "-sm",
+    "--softmax",
+    action="store_true",
+    help="whather output probability in predict mode",
+)  # 引數儲存為 boolean
 args = parser.parse_args()
 # =================================argparser================================
 
@@ -148,7 +154,7 @@ if args.mode == "train":
 
     optimizer = AdamW(
         optimizer_grouped_parameters,
-        lr=4e-5,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
+        lr=2e-5,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
     )
 
     train_loader = DataLoader(Trainset, shuffle=True, batch_size=args.batch_size)
@@ -255,9 +261,14 @@ elif args.mode == "test":
     save_metrics(metric_path, "test", best_epoch=None, **te_metric)
 
 else:
-    with open("./data/test_rm_br.pkl", "rb") as f:
-        test = pickle.load(f)
-    test_data = test["review"].values
+    if args.mode == "predict":
+        with open("./data/test_rm_br.pkl", "rb") as f:
+            test = pickle.load(f)
+        test_data = test["review"].values
+    else:
+        with open("./data/train_valid_split/level_2/X_l2.pkl", "rb") as f:
+            test = pickle.load(f)
+        test_data = test.values
 
     # check gpu
     device = get_device()
@@ -287,7 +298,7 @@ else:
     model.load_state_dict(torch.load(PATH))
 
     # loader
-    test_loader = DataLoader(testdataset, shuffle=False, batch_size=16)
+    test_loader = DataLoader(testdataset, shuffle=False, batch_size=64)
 
     # prediction
     pred = []
@@ -300,7 +311,11 @@ else:
             output = model(b_input_ids, attention_mask=b_input_mask)
             logits = output[0]
 
-            _, yhat = torch.max(logits.data, 1)
+            if args.softmax:
+                prob_2dim = F.softmax(logits, dim=1)
+                yhat = prob_2dim[:, 1]
+            else:
+                _, yhat = torch.max(logits.data, 1)
 
             pred.extend(yhat.cpu().detach().numpy())
 
@@ -309,7 +324,18 @@ else:
     # save result
     path = os.path.abspath(os.path.join(metric_path, ".."))
     print("output:", path)
-    submission = pd.DataFrame({"ID": test["ID"].values, "sentiment": pred})
-    submission.to_csv(
-        os.path.join(path, "submission.csv"), encoding="utf-8", index=False
-    )
+    if args.mode == "predict":
+        if args.softmax:
+            filename = "submission_softmax.csv"
+        else:
+            filename = "submission.csv"
+
+        submission = pd.DataFrame({"ID": test["ID"].values, "sentiment": pred})
+        submission.to_csv(os.path.join(path, filename), encoding="utf-8", index=False)
+    else:
+        if args.softmax:
+            filename = "level2_softmax.csv"
+        else:
+            filename = "level2.csv"
+        submission = pd.DataFrame({"sentiment": pred})
+        submission.to_csv(os.path.join(path, filename), encoding="utf-8", index=False)

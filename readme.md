@@ -17,9 +17,10 @@
 
 ```bash
 python main.py -m train -bs 8 -epo 10 --model_name bert-base-cased
-# python main.py -m train -bs 8 -epo 10 --model_name roberta-base
-# python main.py -m train -bs 8 -epo 10 --model_name xlnet-base-cased
-# python main.py -m train -bs 8 -epo 10 --model_name google/electra-base-discriminator
+python main.py -m train -bs 8 -epo 10 --model_name roberta-base
+python main.py -m train -bs 8 -epo 10 --model_name xlnet-base-cased
+python main.py -m train -bs 8 -epo 10 --model_name google/electra-base-discriminator
+python main.py -m train -bs 4 -epo 10 --model_name microsoft/deberta-base
 ```
 
 **Test:**
@@ -28,10 +29,34 @@ python main.py -m train -bs 8 -epo 10 --model_name bert-base-cased
 python main.py -m test -bs 8 -epo 10 --model_name bert-base-cased
 ```
 
+**Level 2:**
+
+```bash
+python main.py -m l2 -bs 8 -epo 7 --model_name bert-base-cased
+python main.py -m l2 -bs 8 -epo 10 --model_name roberta-base
+python main.py -m l2 -bs 8 -epo 10 --model_name xlnet-base-cased
+python main.py -m l2 -bs 8 -epo 10 --model_name google/electra-base-discriminator
+python main.py -m l2 -bs 4 -epo 9 --model_name microsoft/deberta-base
+```
+
+**Level 2 softmax:**
+
+```bash
+python main.py -m l2 -bs 8 -epo 7 --model_name bert-base-cased -sm
+python main.py -m l2 -bs 8 -epo 10 --model_name roberta-base -sm
+python main.py -m l2 -bs 8 -epo 10 --model_name xlnet-base-cased -sm
+python main.py -m l2 -bs 8 -epo 10 --model_name google/electra-base-discriminator -sm
+python main.py -m l2 -bs 4 -epo 9 --model_name microsoft/deberta-base -sm
+```
+
 **Predict:**
 
 ```bash
-python main.py -m predict -bs 8 -epo 10 --model_name bert-base-cased
+python main.py -m predict -bs 8 -epo 7 --model_name bert-base-cased
+python main.py -m predict -bs 8 -epo 10 --model_name roberta-base
+python main.py -m predict -bs 8 -epo 10 --model_name xlnet-base-cased
+python main.py -m predict -bs 8 -epo 10 --model_name google/electra-base-discriminator
+python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base
 ```
 
 ## Reference

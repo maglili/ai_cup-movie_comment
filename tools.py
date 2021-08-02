@@ -76,7 +76,7 @@ def setting_path(model_name, batch_size, epochs, mode="train"):
         if not os.path.isdir(history_path):
             os.makedirs(history_path)
 
-    elif mode == "predict":
+    else:
         data_path = os.path.abspath(os.path.join(cwd, "result", folder_name, mode))
         model_path = os.path.abspath(
             os.path.join(cwd, "result", folder_name, "train", "model")
