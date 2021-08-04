@@ -59,6 +59,16 @@ python main.py -m predict -bs 8 -epo 10 --model_name google/electra-base-discrim
 python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base
 ```
 
+**Predict softmax:**
+
+```bash
+python main.py -m predict -bs 8 -epo 7 --model_name bert-base-cased -sm
+python main.py -m predict -bs 8 -epo 10 --model_name roberta-base -sm
+python main.py -m predict -bs 8 -epo 10 --model_name xlnet-base-cased -sm
+python main.py -m predict -bs 8 -epo 10 --model_name google/electra-base-discriminator -sm
+python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base -sm
+```
+
 ## Reference
 
 1. [BERT Fine-Tuning Tutorial with PyTorch](https://mccormickml.com/2019/07/22/BERT-fine-tuning/#a2-weight-decay)
