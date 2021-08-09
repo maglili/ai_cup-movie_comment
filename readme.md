@@ -74,7 +74,8 @@ python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base -sm
 **retrain:**
 
 ```bash
-python main.py -m predict -bs * -epo * --model_name * -wt
+python main.py -m train -bs * -epo * --model_name * -wt
+python main.py -m train -bs 8 -epo 10 --model_name bert-base-cased -wt
 ```
 
 **Level 2(softmax):**

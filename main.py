@@ -95,6 +95,7 @@ if args.mode == "train":
         args.epochs,
         args.mode,
     )
+
     if args.without_test:
         path = "./data/train_valid_split_without_test/level_1/"
     else:
@@ -129,8 +130,8 @@ if args.mode == "train":
             num_labels=2,
             output_attentions=False,
             output_hidden_states=False,
-            hidden_dropout_prob=0.25,
-            attention_probs_dropout_prob=0.25,
+            dropout=0.25,  # xlnet
+            summary_last_dropout=0.25,  # xlnet
         )
     else:
         model = AutoModelForSequenceClassification.from_pretrained(
@@ -138,8 +139,8 @@ if args.mode == "train":
             num_labels=2,
             output_attentions=False,
             output_hidden_states=False,
-            dropout=0.25,  # xlnet
-            summary_last_dropout=0.25,  # xlnet
+            hidden_dropout_prob=0.25,
+            attention_probs_dropout_prob=0.25,
         )
     model.to(device)
 
