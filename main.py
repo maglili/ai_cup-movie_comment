@@ -1,6 +1,6 @@
 import argparse
 import random
-import pickle
+import pickle5 as pickle
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader, TensorDataset
