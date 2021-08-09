@@ -76,3 +76,10 @@ python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base -sm
 3. [Cross validation strategy when blending/stacking](https://www.kaggle.com/general/18793)
 4. [Complete Machine Learning Guide to Parameter Tuning in Gradient Boosting (GBM) in Python](https://www.analyticsvidhya.com/blog/2016/02/complete-guide-parameter-tuning-gradient-boosting-gbm-python/)
 5. [4 Boosting Algorithms You Should Know – GBM, XGBoost, LightGBM & CatBoost](https://www.analyticsvidhya.com/blog/2020/02-boosting-algorithms-machine-learning/)
+
+**model:**
+
+1. https://huggingface.co/cardiffnlp/twitter-roberta-base-emotion
+2. https://huggingface.co/cardiffnlp/twitter-roberta-base-offensive
+3. https://huggingface.co/textattack/bert-base-uncased-imdb
+4. https://huggingface.co/aychang/roberta-base-imdb

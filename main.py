@@ -29,7 +29,7 @@ parser.add_argument(
     "--batch_size",
     nargs="?",
     type=int,
-    default=4,
+    default=8,
     help="Number of training epochs.",
 )
 parser.add_argument(
@@ -41,6 +41,14 @@ parser.add_argument(
     help="Number of training epochs.",
 )
 parser.add_argument(
+    "-lr",
+    "--learning_rate",
+    nargs="?",
+    type=float,
+    default=4e-5,
+    help="learning rate",
+)
+parser.add_argument(
     "--model_name",
     nargs="?",
     type=str,
@@ -50,6 +58,12 @@ parser.add_argument(
 parser.add_argument(
     "-sm",
     "--softmax",
+    action="store_true",
+    help="whather output probability in predict mode",
+)  # 引數儲存為 boolean
+parser.add_argument(
+    "-wt",
+    "--without_test",
     action="store_true",
     help="whather output probability in predict mode",
 )  # 引數儲存為 boolean
@@ -71,11 +85,14 @@ if args.mode == "train":
     metric_path, model_path, history_path, fig_path = setting_path(
         args.model_name,
         args.batch_size,
+        args.learning_rate,
         args.epochs,
         args.mode,
     )
-
-    path = "./data/train_valid_split/level_1/"
+    if args.without_test:
+        path = "./data/train_valid_split_without_test/level_1/"
+    else:
+        path = "./data/train_valid_split/level_1/"
     with open(os.path.join(path, "X_tr.pkl"), "rb") as f:
         X_tr = pickle.load(f)
     with open(os.path.join(path, "X_va.pkl"), "rb") as f:
@@ -154,7 +171,7 @@ if args.mode == "train":
 
     optimizer = AdamW(
         optimizer_grouped_parameters,
-        lr=2e-5,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
+        lr=args.learning_rate,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
     )
 
     train_loader = DataLoader(Trainset, shuffle=True, batch_size=args.batch_size)
@@ -217,7 +234,7 @@ elif args.mode == "test":
 
     # setting path
     metric_path, model_path, history_path, _ = setting_path(
-        args.model_name, args.batch_size, args.epochs, args.mode
+        args.model_name, args.batch_size, args.learning_rate, args.epochs, args.mode
     )
 
     # tokenize
@@ -266,7 +283,11 @@ else:
             test = pickle.load(f)
         test_data = test["review"].values
     else:
-        with open("./data/train_valid_split/level_2/X_l2.pkl", "rb") as f:
+        if args.without_test:
+            path = "./data/train_valid_split_without_test/level_2/X_l2.pkl"
+        else:
+            path = "./data/train_valid_split/level_2/X_l2.pkl"
+        with open(path, "rb") as f:
             test = pickle.load(f)
         test_data = test.values
 
@@ -275,7 +296,7 @@ else:
 
     # setting path
     metric_path, model_path, _, _ = setting_path(
-        args.model_name, args.batch_size, args.epochs, args.mode
+        args.model_name, args.batch_size, args.learning_rate, args.epochs, args.mode
     )
 
     # tokenize

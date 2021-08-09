@@ -27,12 +27,20 @@ def get_device():
     return device
 
 
-def setting_path(model_name, batch_size, epochs, mode="train"):
+def setting_path(model_name, batch_size, learning_rate, epochs, mode="train"):
     # setting path
     cwd = os.getcwd()
     if "/" in model_name:
         model_name = re.sub("/", "_", model_name)
-    folder_name = model_name + "_bs_" + str(batch_size) + "_epo" + str(epochs)
+    folder_name = (
+        model_name
+        + "_bs"
+        + str(batch_size)
+        + "_lr"
+        + str(learning_rate)
+        + "_epo"
+        + str(epochs)
+    )
 
     if mode == "train":
         model_path = os.path.abspath(
@@ -455,7 +463,10 @@ def plot_roc(history, fig_path="./", best_epoch=None, show=False):
     va_tpr = history["valid_tpr"][idx]
     plt.plot(va_fpr, va_tpr, label="valid AUC = %0.2f" % va_auc)
 
-    plt.title("ROC")
+    if best_epoch:
+        plt.title("Best epoch's ROC")
+    else:
+        plt.title("ROC")
     plt.plot([0, 1], [0, 1], "r--")
     plt.xlim([0, 1])
     plt.ylim([0, 1])
