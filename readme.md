@@ -39,7 +39,7 @@ python main.py -m l2 -bs 8 -epo 10 --model_name google/electra-base-discriminato
 python main.py -m l2 -bs 4 -epo 9 --model_name microsoft/deberta-base
 ```
 
-**Level 2 softmax:**
+**Level 2(softmax):**
 
 ```bash
 python main.py -m l2 -bs 8 -epo 7 --model_name bert-base-cased -sm
@@ -49,7 +49,7 @@ python main.py -m l2 -bs 8 -epo 10 --model_name google/electra-base-discriminato
 python main.py -m l2 -bs 4 -epo 9 --model_name microsoft/deberta-base -sm
 ```
 
-**Predict:**
+**Predict test data for Level 2:**
 
 ```bash
 python main.py -m predict -bs 8 -epo 7 --model_name bert-base-cased
@@ -59,7 +59,7 @@ python main.py -m predict -bs 8 -epo 10 --model_name google/electra-base-discrim
 python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base
 ```
 
-**Predict softmax:**
+**Predict test data for Level 2(softmax):**
 
 ```bash
 python main.py -m predict -bs 8 -epo 7 --model_name bert-base-cased -sm

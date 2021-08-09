@@ -32,17 +32,30 @@ def setting_path(model_name, batch_size, learning_rate, epochs, mode="train"):
     cwd = os.getcwd()
     if "/" in model_name:
         model_name = re.sub("/", "_", model_name)
-    folder_name = (
-        model_name
-        + "_bs"
-        + str(batch_size)
-        + "_lr"
-        + str(learning_rate)
-        + "_epo"
-        + str(epochs)
-    )
 
-    if mode == "train":
+    if mode != "retrin":
+        folder_name = (
+            model_name
+            + "_bs"
+            + str(batch_size)
+            + "_lr"
+            + str(learning_rate)
+            + "_epo"
+            + str(epochs)
+        )
+    else:
+        folder_name = (
+            model_name
+            + "_bs"
+            + str(batch_size)
+            + "_lr"
+            + str(learning_rate)
+            + "_epo"
+            + str(epochs)
+            + mode,
+        )
+
+    if (mode == "train") or (mode == "retrain"):
         model_path = os.path.abspath(
             os.path.join(cwd, "result", folder_name, "train", "model")
         )
@@ -353,6 +366,95 @@ def train_model(
     return useful_stuff, early_stopping.best_epoch
 
 
+def retrain_model(
+    model,
+    train_loader,
+    optimizer,
+    N_train,
+    device,
+    scheduler,
+    path,
+    epochs=4,
+):
+    """
+    Retrain the BERT model.
+    You should use train_model first to get best hyperparameters.
+
+    Data definition:
+        Training: metric that model in training model on train set.
+        train: metric that model in eval model on train set.
+    """
+
+    useful_stuff = {
+        "training_loss": [],
+        "training_acc": [],
+        "training_auc": [],
+        "training_metric": [],
+        "training_fpr": [],
+        "training_tpr": [],
+        "train_loss": [],
+        "train_acc": [],
+        "train_auc": [],
+        "train_metric": [],
+        "train_fpr": [],
+        "train_tpr": [],
+    }
+
+    # initialize the early_stopping object
+    model_path = os.path.join(path, "model.pkl")
+
+    for epoch in range(epochs):
+        # training
+        (
+            model,
+            correct,
+            training_loss,
+            (TP, FP, TN, FN),
+            y_list,
+            yhat_list,
+        ) = batch_iter(model, train_loader, optimizer, scheduler, device, training=True)
+
+        useful_stuff = calc_metrics(
+            N_train,
+            train_loader,
+            correct,
+            training_loss,
+            (TP, FP, TN, FN),
+            y_list,
+            yhat_list,
+            useful_stuff,
+            mtype="training",
+        )
+
+        # evaluate training
+        (
+            model,
+            correct,
+            training_loss,
+            (TP, FP, TN, FN),
+            y_list,
+            yhat_list,
+        ) = batch_iter(
+            model, train_loader, optimizer, scheduler, device, training=False
+        )
+
+        useful_stuff = calc_metrics(
+            N_train,
+            train_loader,
+            correct,
+            training_loss,
+            (TP, FP, TN, FN),
+            y_list,
+            yhat_list,
+            useful_stuff,
+            mtype="train",
+        )
+
+        print("=" * 25)
+
+    return useful_stuff, None
+
+
 def save_metrics(
     path,
     mtype,
@@ -458,10 +560,11 @@ def plot_roc(history, fig_path="./", best_epoch=None, show=False):
     plt.plot(tr_fpr, tr_tpr, label="Train AUC = %0.2f" % tr_auc)
 
     # valid
-    va_auc = history["valid_auc"][idx]
-    va_fpr = history["valid_fpr"][idx]
-    va_tpr = history["valid_tpr"][idx]
-    plt.plot(va_fpr, va_tpr, label="valid AUC = %0.2f" % va_auc)
+    if "valid_auc" in history:
+        va_auc = history["valid_auc"][idx]
+        va_fpr = history["valid_fpr"][idx]
+        va_tpr = history["valid_tpr"][idx]
+        plt.plot(va_fpr, va_tpr, label="valid AUC = %0.2f" % va_auc)
 
     if best_epoch:
         plt.title("Best epoch's ROC")
@@ -488,11 +591,13 @@ def plot_lr(metric, history, fig_path="./", best_epoch=None, show=False):
         history["train_" + metric],
         label="train",
     )
+
     # valid
-    plt.plot(
-        history["valid_" + metric],
-        label="valid",
-    )
+    if ("valid_" + metric) in history:
+        plt.plot(
+            history["valid_" + metric],
+            label="valid",
+        )
 
     plt.ylabel(metric)
     plt.xlabel("epochs")

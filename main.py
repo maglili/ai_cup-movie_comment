@@ -117,16 +117,24 @@ if args.mode == "train":
     Validset = TensorDataset(input_ids_va, attention_masks_va, labels_va)
 
     # Training
-    model = AutoModelForSequenceClassification.from_pretrained(
-        args.model_name,
-        num_labels=2,
-        output_attentions=False,
-        output_hidden_states=False,
-        hidden_dropout_prob=0.25,
-        attention_probs_dropout_prob=0.25,
-        # dropout=0.25,  # xlnet
-        # summary_last_dropout=0.25,  # xlnet
-    )
+    if "xlnet" in args.model_name:
+        model = AutoModelForSequenceClassification.from_pretrained(
+            args.model_name,
+            num_labels=2,
+            output_attentions=False,
+            output_hidden_states=False,
+            hidden_dropout_prob=0.25,
+            attention_probs_dropout_prob=0.25,
+        )
+    else:
+        model = AutoModelForSequenceClassification.from_pretrained(
+            args.model_name,
+            num_labels=2,
+            output_attentions=False,
+            output_hidden_states=False,
+            dropout=0.25,  # xlnet
+            summary_last_dropout=0.25,  # xlnet
+        )
     model.to(device)
 
     # This code is taken from:
@@ -276,6 +284,142 @@ elif args.mode == "test":
     # save metric
     te_metric = final_metric(history, mtype="test")
     save_metrics(metric_path, "test", best_epoch=None, **te_metric)
+
+elif args.mode == "retrain":
+    # check gpu
+    device = get_device()
+
+    # setting path
+    metric_path, model_path, history_path, fig_path = setting_path(
+        args.model_name,
+        args.batch_size,
+        args.learning_rate,
+        args.epochs,
+        args.mode,
+    )
+    if args.without_test:
+        path = "./data/train_valid_split_without_test/level_1/"
+    else:
+        path = "./data/train_valid_split/level_1/"
+    with open(os.path.join(path, "X_tr.pkl"), "rb") as f:
+        X_tr = pickle.load(f)
+    with open(os.path.join(path, "X_va.pkl"), "rb") as f:
+        X_va = pickle.load(f)
+    with open(os.path.join(path, "y_tr.pkl"), "rb") as f:
+        y_tr = pickle.load(f)
+    with open(os.path.join(path, "y_va.pkl"), "rb") as f:
+        y_va = pickle.load(f)
+
+    # tokenize
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name, do_lower_case=False)
+
+    input_ids_tr, attention_masks_tr, labels_tr = tokenizing(
+        X_tr.values, y_tr.values, tokenizer
+    )
+
+    # Holdout dataset
+    Trainset = TensorDataset(input_ids_tr, attention_masks_tr, labels_tr)
+
+    # Training
+    if "xlnet" in args.model_name:
+        model = AutoModelForSequenceClassification.from_pretrained(
+            args.model_name,
+            num_labels=2,
+            output_attentions=False,
+            output_hidden_states=False,
+            hidden_dropout_prob=0.25,
+            attention_probs_dropout_prob=0.25,
+        )
+    else:
+        model = AutoModelForSequenceClassification.from_pretrained(
+            args.model_name,
+            num_labels=2,
+            output_attentions=False,
+            output_hidden_states=False,
+            dropout=0.25,  # xlnet
+            summary_last_dropout=0.25,  # xlnet
+        )
+    model.to(device)
+
+    # This code is taken from:
+    # https://github.com/huggingface/transformers/blob/5bfcd0485ece086ebcbed2d008813037968a9e58/examples/run_glue.py#L102
+
+    # Don't apply weight decay to any parameters whose names include these tokens.
+    # (Here, the BERT doesn't have `gamma` or `beta` parameters, only `bias` terms)
+    no_decay = ["bias", "LayerNorm.weight"]
+
+    # Separate the `weight` parameters from the `bias` parameters.
+    # - For the `weight` parameters, this specifies a 'weight_decay_rate' of 0.01.
+    # - For the `bias` parameters, the 'weight_decay_rate' is 0.0.
+    optimizer_grouped_parameters = [
+        # Filter for all parameters which *don't* include 'bias', 'gamma', 'beta'.
+        {
+            "params": [
+                p
+                for n, p in model.named_parameters()
+                if not any(nd in n for nd in no_decay)
+            ],
+            "weight_decay_rate": 0.01,
+        },
+        # Filter for parameters which *do* include those.
+        {
+            "params": [
+                p
+                for n, p in model.named_parameters()
+                if any(nd in n for nd in no_decay)
+            ],
+            "weight_decay_rate": 0.0,
+        },
+    ]
+
+    # Note - `optimizer_grouped_parameters` only includes the parameter values, not
+    # the names.
+
+    N_train = len(Trainset)
+    print("Num of train samples:", N_train)
+    print()
+
+    optimizer = AdamW(
+        optimizer_grouped_parameters,
+        lr=args.learning_rate,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
+    )
+
+    train_loader = DataLoader(Trainset, shuffle=True, batch_size=args.batch_size)
+
+    # Total number of training steps is [number of batches] x [number of epochs].
+    # (Note that this is not the same as the number of training samples).
+    total_steps = len(train_loader) * args.epochs
+
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer, num_warmup_steps=total_steps * 0.1, num_training_steps=total_steps
+    )
+
+    history, best_epoch = retrain_model(
+        model=model,
+        train_loader=train_loader,
+        optimizer=optimizer,
+        N_train=N_train,
+        device=device,
+        scheduler=scheduler,
+        path=model_path,
+        epochs=args.epochs,
+    )
+
+    # save trainin_history
+    with open(os.path.join(history_path, "hist.pkl"), "wb") as f:
+        pickle.dump(history, f)
+
+    # metric
+    tr_metric = final_metric(history, mtype="train", best_epoch=best_epoch)
+    save_metrics(metric_path, "train", best_epoch=best_epoch, **tr_metric)
+    print("=" * 10)
+    tr_metric = final_metric(history, mtype="train", best_epoch=None)
+    save_metrics(metric_path, "train", best_epoch=None, **tr_metric)
+
+    # plot learning curve
+    plot_lr("acc", history, fig_path=fig_path, best_epoch=best_epoch, show=False)
+    plot_lr("loss", history, fig_path=fig_path, best_epoch=best_epoch, show=False)
+    plot_roc(history, fig_path=fig_path, best_epoch=best_epoch, show=False)
 
 else:
     if args.mode == "predict":
