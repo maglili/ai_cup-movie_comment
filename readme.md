@@ -11,7 +11,7 @@
 [<img src="https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white" width="px" height="30px">](https://pytorch.org/)
 [<img src="https://ForTheBadge.com/images/badges/uses-git.svg" alt="use-git" width="px" height="30px">](https://git-scm.com/)
 
-## Intro
+## Incomplete Model
 
 **Train:**
 
@@ -29,7 +29,7 @@ python main.py -m train -bs 4 -epo 10 --model_name microsoft/deberta-base
 python main.py -m test -bs 8 -epo 10 --model_name bert-base-cased
 ```
 
-**Level 2:**
+<!-- **Level 2:**
 
 ```bash
 python main.py -m l2 -bs 8 -epo 7 --model_name bert-base-cased
@@ -37,7 +37,7 @@ python main.py -m l2 -bs 8 -epo 10 --model_name roberta-base
 python main.py -m l2 -bs 8 -epo 10 --model_name xlnet-base-cased
 python main.py -m l2 -bs 8 -epo 10 --model_name google/electra-base-discriminator
 python main.py -m l2 -bs 4 -epo 9 --model_name microsoft/deberta-base
-```
+``` -->
 
 **Level 2(softmax):**
 
@@ -49,7 +49,7 @@ python main.py -m l2 -bs 8 -epo 10 --model_name google/electra-base-discriminato
 python main.py -m l2 -bs 4 -epo 9 --model_name microsoft/deberta-base -sm
 ```
 
-**Predict test data for Level 2:**
+**Predict for submission:**
 
 ```bash
 python main.py -m predict -bs 8 -epo 7 --model_name bert-base-cased
@@ -59,7 +59,7 @@ python main.py -m predict -bs 8 -epo 10 --model_name google/electra-base-discrim
 python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base
 ```
 
-**Predict test data for Level 2(softmax):**
+<!-- **Predict for submission(softmax):**
 
 ```bash
 python main.py -m predict -bs 8 -epo 7 --model_name bert-base-cased -sm
@@ -67,6 +67,26 @@ python main.py -m predict -bs 8 -epo 10 --model_name roberta-base -sm
 python main.py -m predict -bs 8 -epo 10 --model_name xlnet-base-cased -sm
 python main.py -m predict -bs 8 -epo 10 --model_name google/electra-base-discriminator -sm
 python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base -sm
+``` -->
+
+## Complete Model
+
+**retrain:**
+
+```bash
+python main.py -m predict -bs * -epo * --model_name * -wt
+```
+
+**Level 2(softmax):**
+
+```bash
+python main.py -m l2 -bs * -epo * --model_name * -sm -wt -com
+```
+
+**Predict for submission:**
+
+```bash
+python main.py -m predict -bs * -epo * --model_name * -wt -com
 ```
 
 ## Reference
@@ -79,7 +99,7 @@ python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base -sm
 
 **model:**
 
-1. https://huggingface.co/cardiffnlp/twitter-roberta-base-emotion
-2. https://huggingface.co/cardiffnlp/twitter-roberta-base-offensive
-3. https://huggingface.co/textattack/bert-base-uncased-imdb
-4. https://huggingface.co/aychang/roberta-base-imdb
+1. <https://huggingface.co/cardiffnlp/twitter-roberta-base-emotion>
+2. <https://huggingface.co/cardiffnlp/twitter-roberta-base-offensive>
+3. <https://huggingface.co/textattack/bert-base-uncased-imdb>
+4. <https://huggingface.co/aychang/roberta-base-imdb>

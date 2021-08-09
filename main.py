@@ -65,7 +65,13 @@ parser.add_argument(
     "-wt",
     "--without_test",
     action="store_true",
-    help="whather output probability in predict mode",
+    help="whather to use data with testset",
+)  # 引數儲存為 boolean
+parser.add_argument(
+    "-com",
+    "--complete_model",
+    action="store_true",
+    help="whather to use complete model",
 )  # 引數儲存為 boolean
 args = parser.parse_args()
 # =================================argparser================================
@@ -242,7 +248,12 @@ elif args.mode == "test":
 
     # setting path
     metric_path, model_path, history_path, _ = setting_path(
-        args.model_name, args.batch_size, args.learning_rate, args.epochs, args.mode
+        args.model_name,
+        args.batch_size,
+        args.learning_rate,
+        args.epochs,
+        args.mode,
+        args.complete_model,
     )
 
     # tokenize
@@ -440,7 +451,12 @@ else:
 
     # setting path
     metric_path, model_path, _, _ = setting_path(
-        args.model_name, args.batch_size, args.learning_rate, args.epochs, args.mode
+        args.model_name,
+        args.batch_size,
+        args.learning_rate,
+        args.epochs,
+        args.mode,
+        args.complete_model,
     )
 
     # tokenize

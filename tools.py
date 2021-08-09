@@ -27,13 +27,15 @@ def get_device():
     return device
 
 
-def setting_path(model_name, batch_size, learning_rate, epochs, mode="train"):
+def setting_path(
+    model_name, batch_size, learning_rate, epochs, mode="train", complete_model=False
+):
     # setting path
     cwd = os.getcwd()
     if "/" in model_name:
         model_name = re.sub("/", "_", model_name)
 
-    if mode != "retrin":
+    if (mode == "retrin") or (complete_model):
         folder_name = (
             model_name
             + "_bs"
@@ -42,6 +44,7 @@ def setting_path(model_name, batch_size, learning_rate, epochs, mode="train"):
             + str(learning_rate)
             + "_epo"
             + str(epochs)
+            + "retrain",
         )
     else:
         folder_name = (
@@ -52,7 +55,6 @@ def setting_path(model_name, batch_size, learning_rate, epochs, mode="train"):
             + str(learning_rate)
             + "_epo"
             + str(epochs)
-            + mode,
         )
 
     if (mode == "train") or (mode == "retrain"):
