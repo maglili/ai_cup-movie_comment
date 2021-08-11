@@ -59,7 +59,7 @@ python main.py -m predict -bs 8 -epo 10 --model_name google/electra-base-discrim
 python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base
 ```
 
-<!-- **Predict for submission(softmax):**
+**Predict for submission(softmax):**
 
 ```bash
 python main.py -m predict -bs 8 -epo 7 --model_name bert-base-cased -sm
@@ -67,27 +67,54 @@ python main.py -m predict -bs 8 -epo 10 --model_name roberta-base -sm
 python main.py -m predict -bs 8 -epo 10 --model_name xlnet-base-cased -sm
 python main.py -m predict -bs 8 -epo 10 --model_name google/electra-base-discriminator -sm
 python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base -sm
-``` -->
+```
 
 ## Complete Model
+
+**train:**
+
+```bash
+python main.py -m train -bs 8 -epo 10 --model_name bert-base-cased -wt
+python main.py -m train -bs 8 -epo 10 --model_name roberta-base -wt
+python main.py -m train -bs 8 -epo 10 --model_name xlnet-base-cased -wt # Fail
+python main.py -m train -bs 8 -epo 10 --model_name google/electra-base-discriminator -wt
+python main.py -m train -bs 4 -epo 10 -lr 2e-5 --model_name microsoft/deberta-base -wt
+python main.py -m train -bs 8 -epo 10 -lr 4e-5 --model_name textattack/bert-base-uncased-imdb -wt
+python main.py -m train -bs 8 -epo 10 -lr 4e-5 --model_name aychang/roberta-base-imdb -wt
+```
 
 **retrain:**
 
 ```bash
-python main.py -m train -bs * -epo * --model_name * -wt
-python main.py -m train -bs 8 -epo 10 --model_name bert-base-cased -wt
+python main.py -m retrain -bs 8 -epo 2 -lr 4e-5 --model_name bert-base-cased -wt -com
+python main.py -m retrain -bs 8 -epo 3 --model_name roberta-base -wt -com
+python main.py -m retrain -bs 8 -epo 10 --model_name xlnet-base-cased -wt # Fail
+python main.py -m retrain -bs 8 -epo 2 --model_name google/electra-base-discriminator -wt -com
+python main.py -m retrain -bs 4 -epo 1 -lr 2e-5 --model_name microsoft/deberta-base -wt -com
+python main.py -m retrain -bs 8 -epo 1 -lr 4e-5 --model_name textattack/bert-base-uncased-imdb -wt -com
+python main.py -m retrain -bs 8 -epo 2 -lr 4e-5 --model_name aychang/roberta-base-imdb -wt -com
 ```
 
 **Level 2(softmax):**
 
 ```bash
-python main.py -m l2 -bs * -epo * --model_name * -sm -wt -com
+python main.py -m l2 -bs 8 -epo 10 -lr 4e-5 --model_name bert-base-cased -wt -sm
+python main.py -m l2 -bs 8 -epo 10 -lr 4e-5 --model_name roberta-base -wt -sm
+python main.py -m l2 -bs 8 -epo 10 -lr 4e-5 --model_name google/electra-base-discriminator -wt -sm
+python main.py -m l2 -bs 4 -epo 10 -lr 2e-5 --model_name microsoft/deberta-base -wt -sm
+python main.py -m l2 -bs 8 -epo 10 -lr 4e-5 --model_name textattack/bert-base-uncased-imdb -wt -sm
+python main.py -m l2 -bs 8 -epo 10 -lr 4e-5 --model_name aychang/roberta-base-imdb -wt -sm
 ```
 
-**Predict for submission:**
+**Predict for submission(softmax):**
 
 ```bash
-python main.py -m predict -bs * -epo * --model_name * -wt -com
+python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name bert-base-cased -wt -sm
+python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name roberta-base -wt -sm
+python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name google/electra-base-discriminator -wt -sm
+python main.py -m predict -bs 4 -epo 10 -lr 2e-5 --model_name microsoft/deberta-base -wt -sm
+python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name textattack/bert-base-uncased-imdb -wt -sm
+python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name aychang/roberta-base-imdb -wt -sm
 ```
 
 ## Reference
@@ -98,9 +125,3 @@ python main.py -m predict -bs * -epo * --model_name * -wt -com
 4. [Complete Machine Learning Guide to Parameter Tuning in Gradient Boosting (GBM) in Python](https://www.analyticsvidhya.com/blog/2016/02/complete-guide-parameter-tuning-gradient-boosting-gbm-python/)
 5. [4 Boosting Algorithms You Should Know – GBM, XGBoost, LightGBM & CatBoost](https://www.analyticsvidhya.com/blog/2020/02-boosting-algorithms-machine-learning/)
 
-**model:**
-
-1. <https://huggingface.co/cardiffnlp/twitter-roberta-base-emotion>
-2. <https://huggingface.co/cardiffnlp/twitter-roberta-base-offensive>
-3. <https://huggingface.co/textattack/bert-base-uncased-imdb>
-4. <https://huggingface.co/aychang/roberta-base-imdb>

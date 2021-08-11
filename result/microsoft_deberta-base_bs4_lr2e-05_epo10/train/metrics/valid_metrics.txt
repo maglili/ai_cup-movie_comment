@@ -1,0 +1,10 @@
+[valid average]
+ACC: 0.94
+LOSS: 0.37
+Recall: 0.96
+Specificity: 0.93
+Precision: 0.93
+NPV: 0.96
+F1: 0.94
+MCC: 0.89
+AUC: 0.96

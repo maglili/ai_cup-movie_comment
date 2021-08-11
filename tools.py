@@ -44,7 +44,7 @@ def setting_path(
             + str(learning_rate)
             + "_epo"
             + str(epochs)
-            + "retrain",
+            + "_retrain"
         )
     else:
         folder_name = (
@@ -56,19 +56,18 @@ def setting_path(
             + "_epo"
             + str(epochs)
         )
-
     if (mode == "train") or (mode == "retrain"):
         model_path = os.path.abspath(
             os.path.join(cwd, "result", folder_name, "train", "model")
         )
         metric_path = os.path.abspath(
-            os.path.join(cwd, "result", folder_name, mode, "metrics")
+            os.path.join(cwd, "result", folder_name, "train", "metrics")
         )
         history_path = os.path.abspath(
-            os.path.join(cwd, "result", folder_name, mode, "history")
+            os.path.join(cwd, "result", folder_name, "train", "history")
         )
         fig_path = os.path.abspath(
-            os.path.join(cwd, "result", folder_name, mode, "figures")
+            os.path.join(cwd, "result", folder_name, "train", "figures")
         )
         # Crate path if folder not exists.
         if not os.path.isdir(fig_path):

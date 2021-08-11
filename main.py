@@ -1,6 +1,6 @@
 import argparse
 import random
-import pickle5 as pickle
+import pickle as pickle
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader, TensorDataset
@@ -11,6 +11,7 @@ from transformers import (
     get_linear_schedule_with_warmup,
 )
 from tools import *
+import gc
 
 
 # =================================argparser================================
@@ -20,7 +21,7 @@ parser.add_argument(
     "--mode",
     nargs="?",
     type=str,
-    choices=["train", "test", "predict", "l2"],
+    choices=["train", "test", "retrain", "predict", "l2"],
     default="train",
     help="train model or evaluate data.",
 )
@@ -211,7 +212,7 @@ if args.mode == "train":
         scheduler=scheduler,
         path=model_path,
         epochs=args.epochs,
-        patience=3,
+        patience=2,
     )
     print("best_epoch:", best_epoch)
 
@@ -308,7 +309,9 @@ elif args.mode == "retrain":
         args.learning_rate,
         args.epochs,
         args.mode,
+        args.complete_model
     )
+
     if args.without_test:
         path = "./data/train_valid_split_without_test/level_1/"
     else:
@@ -321,6 +324,12 @@ elif args.mode == "retrain":
         y_tr = pickle.load(f)
     with open(os.path.join(path, "y_va.pkl"), "rb") as f:
         y_va = pickle.load(f)
+
+    X_tr = pd.concat([X_tr, X_va], ignore_index=True)
+    y_tr = pd.concat([y_tr, y_va], ignore_index=True)
+    
+    del X_va, y_va
+    gc.collect()
 
     # tokenize
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, do_lower_case=False)
@@ -339,8 +348,8 @@ elif args.mode == "retrain":
             num_labels=2,
             output_attentions=False,
             output_hidden_states=False,
-            hidden_dropout_prob=0.25,
-            attention_probs_dropout_prob=0.25,
+            dropout=0.25,  # xlnet
+            summary_last_dropout=0.25,  # xlnet
         )
     else:
         model = AutoModelForSequenceClassification.from_pretrained(
@@ -348,8 +357,8 @@ elif args.mode == "retrain":
             num_labels=2,
             output_attentions=False,
             output_hidden_states=False,
-            dropout=0.25,  # xlnet
-            summary_last_dropout=0.25,  # xlnet
+            hidden_dropout_prob=0.25,
+            attention_probs_dropout_prob=0.25,
         )
     model.to(device)
 
@@ -416,15 +425,14 @@ elif args.mode == "retrain":
         path=model_path,
         epochs=args.epochs,
     )
+    # save model
+    torch.save(model.state_dict(), os.path.join(model_path, "model.pkl"))
 
     # save trainin_history
     with open(os.path.join(history_path, "hist.pkl"), "wb") as f:
         pickle.dump(history, f)
 
     # metric
-    tr_metric = final_metric(history, mtype="train", best_epoch=best_epoch)
-    save_metrics(metric_path, "train", best_epoch=best_epoch, **tr_metric)
-    print("=" * 10)
     tr_metric = final_metric(history, mtype="train", best_epoch=None)
     save_metrics(metric_path, "train", best_epoch=None, **tr_metric)
 
