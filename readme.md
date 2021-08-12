@@ -6,12 +6,72 @@
 [![Generic badge](https://img.shields.io/badge/Plotting-passing-green.svg)](https://shields.io/)
 [![Generic badge](https://img.shields.io/badge/dataset-passing-green.svg)](https://shields.io/)
 
-[<img src="https://ForTheBadge.com/images/badges/made-with-python.svg" alt="made with python" width="" height="30px">](https://www.python.org/)
+[<img src="http://ForTheBadge.com/images/badges/made-with-python.svg" alt="made with python" width="" height="30px">](https://www.python.org/)
 [<img src="https://img.shields.io/badge/Made%20with-Jupyter-orange?style=for-the-badge&logo=Jupyter" alt="made with jupyter" width="px" height="30px">](https://jupyter.org/try)
 [<img src="https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white" width="px" height="30px">](https://pytorch.org/)
-[<img src="https://ForTheBadge.com/images/badges/uses-git.svg" alt="use-git" width="px" height="30px">](https://git-scm.com/)
+[<img src="http://ForTheBadge.com/images/badges/uses-git.svg" alt="use-git" width="px" height="30px">](https://git-scm.com/)
 
-## Incomplete Model
+## Intro
+
+[Problem link](https://aidea-web.tw/topic/c4a666bb-7d83-45a6-8c3b-57514faf2901)
+Movie comments classification (sentiment analysis)
+
+Train multiple different Bert model for stacking.
+
+**Model list:**
+
+1. bert-base-cased
+2. roberta-base
+3. xlnet-base-cased
+4. google/electra-base-discriminator
+5. microsoft/deberta-base
+6. textattack/bert-base-uncased
+7. aychang/roberta-base-imdb
+
+**Project structure:**
+
+```text
+ai_cup-movie/
+├── data
+├── EDA.ipynb
+├── GBDT_ensemble.ipynb
+├── main.py
+├── nn_ensemble.ipynb
+├── pics
+├── pytorchtools.py
+├── readme.md
+├── result
+└── tools.py
+```
+
+**Public result:**
+
+![Public result](./pics/public_result.png)
+
+**Private result:**
+
+![Private result](./pics/private_result.png)
+
+## Workflow
+
+1. EDA.ipynb: Data splitting and EDA
+2. `main.py -m train`: Train bert model
+3. `main.py -m prediction -sm`: Predict test data
+4. `main.py -m l2 -sm`: Predict level 2 dataset(for stacking)
+5. nn_ensemble.ipynb: Stacking
+
+## RUN
+
+**For argument detail:**
+
+```bash
+python main.py -h
+```
+
+### Policy 1: Train / Val / Test
+
+Splitting dataset into train / validation / test set.
+Here I only train 5 Bert model.
 
 **Train:**
 
@@ -49,7 +109,7 @@ python main.py -m l2 -bs 8 -epo 10 --model_name google/electra-base-discriminato
 python main.py -m l2 -bs 4 -epo 9 --model_name microsoft/deberta-base -sm
 ```
 
-**Predict for submission:**
+<!-- **Predict for submission:**
 
 ```bash
 python main.py -m predict -bs 8 -epo 7 --model_name bert-base-cased
@@ -57,7 +117,7 @@ python main.py -m predict -bs 8 -epo 10 --model_name roberta-base
 python main.py -m predict -bs 8 -epo 10 --model_name xlnet-base-cased
 python main.py -m predict -bs 8 -epo 10 --model_name google/electra-base-discriminator
 python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base
-```
+``` -->
 
 **Predict for submission(softmax):**
 
@@ -69,9 +129,11 @@ python main.py -m predict -bs 8 -epo 10 --model_name google/electra-base-discrim
 python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base -sm
 ```
 
-## Without test dataset
+### Policy 2: Data with Train / Val
 
-**train:**
+Splitting dataset into train / validation set.
+
+**Train:**
 
 ```bash
 python main.py -m train -bs 8 -epo 10 --model_name bert-base-cased -wt
@@ -107,9 +169,12 @@ python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name textattack/bert-ba
 python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name aychang/roberta-base-imdb -wt -sm
 ```
 
-## Without test dataset + retrain
+### Policy 3: Train / Val,  final model
 
-**retrain:**
+Splitting dataset into train / validation set,
+and train the final model with best hyper-parameter(without validation set).
+
+**Re-train:**
 
 ```bash
 python main.py -m retrain -bs 8 -epo 2 -lr 4e-5 --model_name bert-base-cased -wt -com
