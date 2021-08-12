@@ -309,7 +309,7 @@ elif args.mode == "retrain":
         args.learning_rate,
         args.epochs,
         args.mode,
-        args.complete_model
+        args.complete_model,
     )
 
     if args.without_test:
@@ -327,7 +327,7 @@ elif args.mode == "retrain":
 
     X_tr = pd.concat([X_tr, X_va], ignore_index=True)
     y_tr = pd.concat([y_tr, y_va], ignore_index=True)
-    
+
     del X_va, y_va
     gc.collect()
 

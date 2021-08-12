@@ -69,30 +69,18 @@ python main.py -m predict -bs 8 -epo 10 --model_name google/electra-base-discrim
 python main.py -m predict -bs 4 -epo 9 --model_name microsoft/deberta-base -sm
 ```
 
-## Complete Model
+## Without test dataset
 
 **train:**
 
 ```bash
 python main.py -m train -bs 8 -epo 10 --model_name bert-base-cased -wt
 python main.py -m train -bs 8 -epo 10 --model_name roberta-base -wt
-python main.py -m train -bs 8 -epo 10 --model_name xlnet-base-cased -wt # Fail
+python main.py -m train -bs 8 -epo 10 --model_name xlnet-base-cased -wt
 python main.py -m train -bs 8 -epo 10 --model_name google/electra-base-discriminator -wt
 python main.py -m train -bs 4 -epo 10 -lr 2e-5 --model_name microsoft/deberta-base -wt
 python main.py -m train -bs 8 -epo 10 -lr 4e-5 --model_name textattack/bert-base-uncased-imdb -wt
 python main.py -m train -bs 8 -epo 10 -lr 4e-5 --model_name aychang/roberta-base-imdb -wt
-```
-
-**retrain:**
-
-```bash
-python main.py -m retrain -bs 8 -epo 2 -lr 4e-5 --model_name bert-base-cased -wt -com
-python main.py -m retrain -bs 8 -epo 3 --model_name roberta-base -wt -com
-python main.py -m retrain -bs 8 -epo 10 --model_name xlnet-base-cased -wt # Fail
-python main.py -m retrain -bs 8 -epo 2 --model_name google/electra-base-discriminator -wt -com
-python main.py -m retrain -bs 4 -epo 1 -lr 2e-5 --model_name microsoft/deberta-base -wt -com
-python main.py -m retrain -bs 8 -epo 1 -lr 4e-5 --model_name textattack/bert-base-uncased-imdb -wt -com
-python main.py -m retrain -bs 8 -epo 2 -lr 4e-5 --model_name aychang/roberta-base-imdb -wt -com
 ```
 
 **Level 2(softmax):**
@@ -100,6 +88,7 @@ python main.py -m retrain -bs 8 -epo 2 -lr 4e-5 --model_name aychang/roberta-bas
 ```bash
 python main.py -m l2 -bs 8 -epo 10 -lr 4e-5 --model_name bert-base-cased -wt -sm
 python main.py -m l2 -bs 8 -epo 10 -lr 4e-5 --model_name roberta-base -wt -sm
+python main.py -m l2 -bs 8 -epo 10 -lr 4e-5 --model_name xlnet-base-cased -wt -sm
 python main.py -m l2 -bs 8 -epo 10 -lr 4e-5 --model_name google/electra-base-discriminator -wt -sm
 python main.py -m l2 -bs 4 -epo 10 -lr 2e-5 --model_name microsoft/deberta-base -wt -sm
 python main.py -m l2 -bs 8 -epo 10 -lr 4e-5 --model_name textattack/bert-base-uncased-imdb -wt -sm
@@ -111,10 +100,49 @@ python main.py -m l2 -bs 8 -epo 10 -lr 4e-5 --model_name aychang/roberta-base-im
 ```bash
 python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name bert-base-cased -wt -sm
 python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name roberta-base -wt -sm
+python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name xlnet-base-cased -wt -sm
 python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name google/electra-base-discriminator -wt -sm
 python main.py -m predict -bs 4 -epo 10 -lr 2e-5 --model_name microsoft/deberta-base -wt -sm
 python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name textattack/bert-base-uncased-imdb -wt -sm
 python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name aychang/roberta-base-imdb -wt -sm
+```
+
+## Without test dataset + retrain
+
+**retrain:**
+
+```bash
+python main.py -m retrain -bs 8 -epo 2 -lr 4e-5 --model_name bert-base-cased -wt -com
+python main.py -m retrain -bs 8 -epo 3 -lr 4e-5 --model_name roberta-base -wt -com
+python main.py -m retrain -bs 8 -epo 4 -lr 4e-5 --model_name xlnet-base-cased -wt -com
+python main.py -m retrain -bs 8 -epo 2 -lr 4e-5 --model_name google/electra-base-discriminator -wt -com
+python main.py -m retrain -bs 4 -epo 1 -lr 2e-5 --model_name microsoft/deberta-base -wt -com
+python main.py -m retrain -bs 8 -epo 1 -lr 4e-5 --model_name textattack/bert-base-uncased-imdb -wt -com
+python main.py -m retrain -bs 8 -epo 2 -lr 4e-5 --model_name aychang/roberta-base-imdb -wt -com
+```
+
+**Level 2(softmax):**
+
+```bash
+python main.py -m l2 -bs 8 -epo 2 -lr 4e-5 --model_name bert-base-cased -wt -com -sm
+python main.py -m l2 -bs 8 -epo 3 -lr 4e-5 --model_name roberta-base -wt -com -sm
+python main.py -m l2 -bs 8 -epo 4 -lr 4e-5 --model_name xlnet-base-cased -wt -com -sm
+python main.py -m l2 -bs 8 -epo 2 -lr 4e-5 --model_name google/electra-base-discriminator -wt -com -sm
+python main.py -m l2 -bs 4 -epo 1 -lr 2e-5 --model_name microsoft/deberta-base -wt -com -sm
+python main.py -m l2 -bs 8 -epo 1 -lr 4e-5 --model_name textattack/bert-base-uncased-imdb -wt -com -sm
+python main.py -m l2 -bs 8 -epo 2 -lr 4e-5 --model_name aychang/roberta-base-imdb -wt -com -sm
+```
+
+**Predict for submission(softmax):**
+
+```bash
+python main.py -m predict -bs 8 -epo 2 -lr 4e-5 --model_name bert-base-cased -wt -com -sm
+python main.py -m predict -bs 8 -epo 3 -lr 4e-5 --model_name roberta-base -wt -com -sm
+python main.py -m predict -bs 8 -epo 4 -lr 4e-5 --model_name xlnet-base-cased -wt -com -sm
+python main.py -m predict -bs 8 -epo 2 -lr 4e-5 --model_name google/electra-base-discriminator -wt -com -sm
+python main.py -m predict -bs 4 -epo 1 -lr 2e-5 --model_name microsoft/deberta-base -wt -com -sm
+python main.py -m predict -bs 8 -epo 1 -lr 4e-5 --model_name textattack/bert-base-uncased-imdb -wt -com -sm
+python main.py -m predict -bs 8 -epo 2 -lr 4e-5 --model_name aychang/roberta-base-imdb -wt -com -sm
 ```
 
 ## Reference
@@ -124,4 +152,3 @@ python main.py -m predict -bs 8 -epo 10 -lr 4e-5 --model_name aychang/roberta-ba
 3. [Cross validation strategy when blending/stacking](https://www.kaggle.com/general/18793)
 4. [Complete Machine Learning Guide to Parameter Tuning in Gradient Boosting (GBM) in Python](https://www.analyticsvidhya.com/blog/2016/02/complete-guide-parameter-tuning-gradient-boosting-gbm-python/)
 5. [4 Boosting Algorithms You Should Know – GBM, XGBoost, LightGBM & CatBoost](https://www.analyticsvidhya.com/blog/2020/02-boosting-algorithms-machine-learning/)
-
