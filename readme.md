@@ -11,10 +11,13 @@
 [<img src="https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white" width="px" height="30px">](https://pytorch.org/)
 [<img src="http://ForTheBadge.com/images/badges/uses-git.svg" alt="use-git" width="px" height="30px">](https://git-scm.com/)
 
-## Intro
+## Introduction
 
-[Problem link](https://aidea-web.tw/topic/c4a666bb-7d83-45a6-8c3b-57514faf2901)
-Movie comments classification (sentiment analysis)
+**Goal:**
+
+Movie comments classification (sentiment analysis)-[Problem link](https://aidea-web.tw/topic/c4a666bb-7d83-45a6-8c3b-57514faf2901)
+
+**Strategy:**
 
 Train multiple different Bert model for stacking.
 
